@@ -1,0 +1,16 @@
+/* Global Responsive and Utility Layout Styles */
+@media (max-width: 768px) {
+  .mobile-toggle {
+    display: flex !important;
+  }
+
+  aside {
+    position: fixed !important;
+    left: -280px;
+    transition: left 0.25s ease-in-out;
+  }
+
+  aside.open {
+    left: 0 !important;
+  }
+}
