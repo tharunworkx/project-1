@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import FilterSelect from '@/components/common/FilterSelect';
 import { useAuth } from '@/context/AuthContext';
 import { useFinanceRole } from '@/hooks/useFinanceRole';
 import { useToast } from '@/context/ToastContext';
@@ -201,17 +202,12 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Report Category <span className="text-destructive">*</span>
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.reportType}
-                      onChange={(e) => setFormData({ ...formData, reportType: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      {REPORT_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, reportType: val })}
+                      options={REPORT_TYPES}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Date Range */}
@@ -219,18 +215,19 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Date Range
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.dateRange}
-                      onChange={(e) => setFormData({ ...formData, dateRange: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="This Month (Oct 2026)">This Month (Oct 2026)</option>
-                      <option value="Last Month (Sep 2026)">Last Month (Sep 2026)</option>
-                      <option value="Q3 2026 (Jul–Sep)">Q3 2026 (Jul–Sep)</option>
-                      <option value="Q4 2026 (Oct–Dec)">Q4 2026 (Oct–Dec)</option>
-                      <option value="Annual FY 2026">Annual FY 2026</option>
-                      <option value="Custom Range">Custom Audit Interval</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, dateRange: val })}
+                      options={[
+                        { value: 'This Month (Oct 2026)', label: 'This Month (Oct 2026)' },
+                        { value: 'Last Month (Sep 2026)', label: 'Last Month (Sep 2026)' },
+                        { value: 'Q3 2026 (Jul–Sep)', label: 'Q3 2026 (Jul–Sep)' },
+                        { value: 'Q4 2026 (Oct–Dec)', label: 'Q4 2026 (Oct–Dec)' },
+                        { value: 'Annual FY 2026', label: 'Annual FY 2026' },
+                        { value: 'Custom Range', label: 'Custom Audit Interval' },
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Department */}
@@ -238,18 +235,15 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Department
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="All">All Departments</option>
-                      {mockDepartments.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, department: val })}
+                      options={[
+                        { value: 'All', label: 'All Departments' },
+                        ...mockDepartments.map((d) => ({ value: d, label: d })),
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Employee */}
@@ -257,18 +251,18 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Employee
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.employee}
-                      onChange={(e) => setFormData({ ...formData, employee: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="All">All Employees</option>
-                      {mockEmployees.map((emp) => (
-                        <option key={emp.name} value={emp.name}>
-                          {emp.name} ({emp.id})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, employee: val })}
+                      options={[
+                        { value: 'All', label: 'All Employees' },
+                        ...mockEmployees.map((emp) => ({
+                          value: emp.name,
+                          label: `${emp.name} (${emp.id})`,
+                        })),
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Expense Category */}
@@ -276,18 +270,15 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Expense Category
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="All">All Categories</option>
-                      {mockCategories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, category: val })}
+                      options={[
+                        { value: 'All', label: 'All Categories' },
+                        ...mockCategories.map((c) => ({ value: c, label: c })),
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Project */}
@@ -295,17 +286,18 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Project Allocation
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.project}
-                      onChange={(e) => setFormData({ ...formData, project: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="All Projects">All Projects</option>
-                      <option value="Cloud Modernization">Cloud Modernization</option>
-                      <option value="APAC Expansion">APAC Expansion</option>
-                      <option value="Core Platform v4">Core Platform v4</option>
-                      <option value="General Operations">General Operations</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, project: val })}
+                      options={[
+                        { value: 'All Projects', label: 'All Projects' },
+                        { value: 'Cloud Modernization', label: 'Cloud Modernization' },
+                        { value: 'APAC Expansion', label: 'APAC Expansion' },
+                        { value: 'Core Platform v4', label: 'Core Platform v4' },
+                        { value: 'General Operations', label: 'General Operations' },
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Status */}
@@ -313,17 +305,18 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Expense / Claim Status
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="All Statuses">All Statuses</option>
-                      <option value="Approved">Approved</option>
-                      <option value="Reimbursed">Reimbursed</option>
-                      <option value="Pending">Pending Audit</option>
-                      <option value="Flagged">Policy Flagged</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, status: val })}
+                      options={[
+                        { value: 'All Statuses', label: 'All Statuses' },
+                        { value: 'Approved', label: 'Approved' },
+                        { value: 'Reimbursed', label: 'Reimbursed' },
+                        { value: 'Pending', label: 'Pending Audit' },
+                        { value: 'Flagged', label: 'Policy Flagged' },
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
 
                   {/* Currency */}
@@ -331,15 +324,16 @@ export const Reports = () => {
                     <label className="block font-semibold text-foreground mb-1">
                       Reporting Currency
                     </label>
-                    <select
+                    <FilterSelect
                       value={formData.currency}
-                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                      className="w-full h-8.5 px-2.5 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none"
-                    >
-                      <option value="INR">INR (₹ - Indian Rupee)</option>
-                      <option value="USD">USD ($ - US Dollar)</option>
-                      <option value="EUR">EUR (€ - Euro)</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, currency: val })}
+                      options={[
+                        { value: 'INR', label: 'INR (₹ - Indian Rupee)' },
+                        { value: 'USD', label: 'USD ($ - US Dollar)' },
+                        { value: 'EUR', label: 'EUR (€ - Euro)' },
+                      ]}
+                      buttonClassName="h-8.5 bg-background border-border text-xs"
+                    />
                   </div>
                 </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import FilterSelect from '@/components/common/FilterSelect';
 import { mockDepartments, mockCategories } from '@/services/mock/financeMockData';
 
 export const BudgetModal = ({
@@ -131,18 +132,12 @@ export const BudgetModal = ({
             <label className="block font-semibold text-foreground mb-1">
               Department <span className="text-destructive">*</span>
             </label>
-            <select
-              name="department"
+            <FilterSelect
               value={formData.department}
-              onChange={handleChange}
-              className="w-full h-9 px-3 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {mockDepartments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, department: val }))}
+              options={mockDepartments}
+              buttonClassName="h-9 bg-background border-border text-xs"
+            />
           </div>
 
           <div>
@@ -165,36 +160,30 @@ export const BudgetModal = ({
             <label className="block font-semibold text-foreground mb-1">
               Expense Category <span className="text-destructive">*</span>
             </label>
-            <select
-              name="category"
+            <FilterSelect
               value={formData.category}
-              onChange={handleChange}
-              className="w-full h-9 px-3 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {mockCategories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, category: val }))}
+              options={mockCategories}
+              buttonClassName="h-9 bg-background border-border text-xs"
+            />
           </div>
 
           <div>
             <label className="block font-semibold text-foreground mb-1">
               Budget Period
             </label>
-            <select
-              name="period"
+            <FilterSelect
               value={formData.period}
-              onChange={handleChange}
-              className="w-full h-9 px-3 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="Q1 2026">Q1 2026 (Jan–Mar)</option>
-              <option value="Q2 2026">Q2 2026 (Apr–Jun)</option>
-              <option value="Q3 2026">Q3 2026 (Jul–Sep)</option>
-              <option value="Q4 2026">Q4 2026 (Oct–Dec)</option>
-              <option value="Annual 2026">Annual 2026</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, period: val }))}
+              options={[
+                { value: 'Q1 2026', label: 'Q1 2026 (Jan–Mar)' },
+                { value: 'Q2 2026', label: 'Q2 2026 (Apr–Jun)' },
+                { value: 'Q3 2026', label: 'Q3 2026 (Jul–Sep)' },
+                { value: 'Q4 2026', label: 'Q4 2026 (Oct–Dec)' },
+                { value: 'Annual 2026', label: 'Annual 2026' },
+              ]}
+              buttonClassName="h-9 bg-background border-border text-xs"
+            />
           </div>
         </div>
 
@@ -252,16 +241,16 @@ export const BudgetModal = ({
             <label className="block font-semibold text-foreground mb-1">
               Currency
             </label>
-            <select
-              name="currency"
+            <FilterSelect
               value={formData.currency}
-              onChange={handleChange}
-              className="w-full h-9 px-3 rounded-md border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="INR">INR (₹ - Indian Rupee)</option>
-              <option value="USD">USD ($ - US Dollar)</option>
-              <option value="EUR">EUR (€ - Euro)</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, currency: val }))}
+              options={[
+                { value: 'INR', label: 'INR (₹ - Indian Rupee)' },
+                { value: 'USD', label: 'USD ($ - US Dollar)' },
+                { value: 'EUR', label: 'EUR (€ - Euro)' },
+              ]}
+              buttonClassName="h-9 bg-background border-border text-xs"
+            />
           </div>
         </div>
 

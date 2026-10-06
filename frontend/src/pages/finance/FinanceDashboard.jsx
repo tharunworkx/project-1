@@ -37,6 +37,7 @@ import { useFinanceRole } from '@/hooks/useFinanceRole';
 import { useToast } from '@/context/ToastContext';
 import financeMockService from '@/services/mock/financeMockService';
 import { formatCurrency } from '@/lib/currency';
+import FilterSelect from '@/components/common/FilterSelect';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'];
 
@@ -100,25 +101,25 @@ export const FinanceDashboard = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Date range filter */}
-          <div className="flex items-center gap-1.5 bg-card border border-border/80 rounded-lg p-1 text-xs shadow-2xs">
-            <Calendar className="size-3.5 text-muted-foreground ml-1.5" />
-            <select
-              value={dateRange}
-              onChange={(e) => {
-                setDateRange(e.target.value);
-                toastInfo(`Filtered analytics by ${e.target.value}`);
-              }}
-              className="h-7 bg-transparent border-none text-xs font-semibold text-foreground focus:outline-none pr-2 cursor-pointer"
-            >
-              <option value="Last 7 Days">Last 7 Days</option>
-              <option value="Last 30 Days">Last 30 Days</option>
-              <option value="This Month">This Month</option>
-              <option value="Last Month">Last Month</option>
-              <option value="Last Quarter">Last Quarter</option>
-              <option value="This Year">This Year</option>
-              <option value="Custom Range">Custom Fiscal Range</option>
-            </select>
-          </div>
+          <FilterSelect
+            value={dateRange}
+            onChange={(val) => {
+              setDateRange(val);
+              toastInfo(`Filtered analytics by ${val}`);
+            }}
+            options={[
+              'Last 7 Days',
+              'Last 30 Days',
+              'This Month',
+              'Last Month',
+              'Last Quarter',
+              'This Year',
+              'Custom Range',
+            ]}
+            icon={<Calendar className="size-3.5 text-muted-foreground" />}
+            buttonClassName="h-8 bg-card border-border/80 shadow-2xs font-semibold px-2.5"
+            widthClass="w-44"
+          />
 
           <div className="flex items-center gap-1.5">
             <Button
