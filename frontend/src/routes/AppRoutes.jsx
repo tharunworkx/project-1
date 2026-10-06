@@ -20,6 +20,10 @@ import Departments from "../pages/administration/Departments";
 import Projects from "../pages/administration/Projects";
 import Categories from "../pages/administration/Categories";
 import Policies from "../pages/administration/Policies";
+import AuditTrail from "../pages/audit/AuditTrail";
+import FraudDetection from "../pages/fraud/FraudDetection";
+import Integrations from "../pages/integrations/Integrations";
+import Monitoring from "../pages/monitoring/Monitoring";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import { useAuth } from "../context/AuthContext";
@@ -78,6 +82,21 @@ export default function AppRoutes() {
 
           <Route path="/admin/policies" element={<Policies />} />
           <Route path="/policies" element={<Navigate to="/admin/policies" replace />} />
+
+          {/* Risk, Security & Compliance */}
+          <Route path="/fraud-detection" element={<FraudDetection />} />
+          <Route path="/admin/fraud" element={<Navigate to="/fraud-detection" replace />} />
+          <Route path="/audit" element={<AuditTrail />} />
+          <Route path="/admin/audit" element={<AuditTrail />} />
+          <Route path="/admin/audit-trail" element={<Navigate to="/audit" replace />} />
+
+          {/* Integrations & Systems */}
+          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/admin/integrations" element={<Navigate to="/integrations" replace />} />
+
+          {/* Application Monitoring */}
+          <Route path="/monitoring" element={<Monitoring />} />
+          <Route path="/admin/monitoring" element={<Navigate to="/monitoring" replace />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />

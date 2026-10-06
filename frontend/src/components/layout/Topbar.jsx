@@ -46,6 +46,14 @@ const routeNames = {
   "/admin/projects": "Projects",
   "/admin/categories": "Expense Categories",
   "/admin/policies": "Policy Configuration",
+  "/fraud-detection": "Fraud & Duplicate Detection",
+  "/admin/fraud": "Fraud & Duplicate Detection",
+  "/audit": "Audit Trail & Compliance",
+  "/admin/audit": "Audit Trail & Compliance",
+  "/integrations": "System Integrations",
+  "/admin/integrations": "System Integrations",
+  "/monitoring": "Application Monitoring",
+  "/admin/monitoring": "Application Monitoring",
   "/settings": "Settings",
 };
 

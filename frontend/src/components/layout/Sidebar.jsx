@@ -9,6 +9,10 @@ import {
   BarChart3,
   Building2,
   ShieldCheck,
+  ShieldAlert,
+  History,
+  Puzzle,
+  Activity,
   Settings,
   ChevronRight,
   PanelLeftClose,
@@ -193,6 +197,12 @@ export function AppSidebar({ ...props }) {
           badge: "3",
         },
         {
+          label: "Fraud & Detection",
+          href: "/fraud-detection",
+          icon: ShieldAlert,
+          badge: "4",
+        },
+        {
           label: "Reimbursements",
           href: "/reimbursements",
           icon: CreditCard,
@@ -224,11 +234,27 @@ export function AppSidebar({ ...props }) {
             { label: "Approval Policies", href: "/admin/policies" },
           ],
         },
+        {
+          label: "Audit Trail",
+          href: "/audit",
+          icon: History,
+        },
+        {
+          label: "Integrations",
+          href: "/integrations",
+          icon: Puzzle,
+        },
       ],
     },
     {
       groupLabel: "SETTINGS & SYSTEM",
       items: [
+        {
+          label: "Monitoring",
+          href: "/monitoring",
+          icon: Activity,
+          badge: "Live",
+        },
         {
           label: "Settings",
           href: "/settings",
