@@ -27,7 +27,7 @@ export const Login = () => {
     e?.preventDefault?.();
     setError('');
     try {
-      await login(email, password);
+      await login(email, password, activeRole);
       navigate('/dashboard');
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Invalid login credentials');
@@ -37,7 +37,7 @@ export const Login = () => {
   const handleGoogleLogin = async () => {
     setError('');
     try {
-      await login(email || 'alex.morgan@company.com', password || 'Password@123');
+      await login(email || 'alex.morgan@company.com', password || 'Password@123', activeRole);
       navigate('/dashboard');
     } catch (err) {
       setError('Google authentication failed');
@@ -50,12 +50,20 @@ export const Login = () => {
       setEmail('alex.morgan@company.com');
       setPassword('AdminPass123!');
       setWorkspace('company.com');
+    } else if (role === 'finance_exec') {
+      setEmail('karthik.m@company.com');
+      setPassword('FinancePass123!');
+      setWorkspace('company.com');
+    } else if (role === 'finance_mgr') {
+      setEmail('anita.d@company.com');
+      setPassword('CfoPass123!');
+      setWorkspace('company.com');
     } else if (role === 'manager') {
-      setEmail('james.wilson@company.com');
+      setEmail('priya.s@company.com');
       setPassword('ManagerPass123!');
       setWorkspace('company.com');
     } else {
-      setEmail('lisa.ray@company.com');
+      setEmail('arun.kumar@company.com');
       setPassword('EmployeePass123!');
       setWorkspace('company.com');
     }
@@ -234,22 +242,44 @@ export const Login = () => {
             </span>
             <span className="text-[10px] text-zinc-400">One-click roles</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             <button
               type="button"
-              onClick={() => handleQuickDemo('admin')}
-              className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
-                activeRole === 'admin'
+              onClick={() => handleQuickDemo('finance_exec')}
+              className={`px-2 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
+                activeRole === 'finance_exec'
                   ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
                   : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 text-zinc-700 dark:text-zinc-300'
               }`}
             >
-              Admin
+              Finance Exec
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickDemo('finance_mgr')}
+              className={`px-2 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
+                activeRole === 'finance_mgr'
+                  ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
+                  : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 text-zinc-700 dark:text-zinc-300'
+              }`}
+            >
+              CFO / Mgr
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickDemo('employee')}
+              className={`px-2 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
+                activeRole === 'employee'
+                  ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
+                  : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 text-zinc-700 dark:text-zinc-300'
+              }`}
+            >
+              Employee
             </button>
             <button
               type="button"
               onClick={() => handleQuickDemo('manager')}
-              className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
+              className={`px-2 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
                 activeRole === 'manager'
                   ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
                   : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 text-zinc-700 dark:text-zinc-300'
@@ -259,14 +289,14 @@ export const Login = () => {
             </button>
             <button
               type="button"
-              onClick={() => handleQuickDemo('employee')}
-              className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center ${
-                activeRole === 'employee'
+              onClick={() => handleQuickDemo('admin')}
+              className={`px-2 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer text-center col-span-2 sm:col-span-1 ${
+                activeRole === 'admin'
                   ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
                   : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-zinc-100 text-zinc-700 dark:text-zinc-300'
               }`}
             >
-              Employee
+              Admin
             </button>
           </div>
         </div>

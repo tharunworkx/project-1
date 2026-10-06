@@ -13,6 +13,8 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  Bell,
+  Landmark,
 } from "lucide-react";
 import {
   Sidebar,
@@ -172,14 +174,14 @@ export function AppSidebar({ ...props }) {
           icon: LayoutDashboard,
         },
         {
-          label: "Reports & Analytics",
-          href: "/reports",
-          icon: BarChart3,
+          label: "Finance Analytics",
+          href: "/finance",
+          icon: Landmark,
         },
       ],
     },
     {
-      groupLabel: "EXPENSE MANAGEMENT",
+      groupLabel: "FINANCE & EXPENSES",
       items: [
         {
           label: "Expenses",
@@ -201,6 +203,11 @@ export function AppSidebar({ ...props }) {
           label: "Budgets",
           href: "/budgets",
           icon: PieChart,
+        },
+        {
+          label: "Financial Reports",
+          href: "/reports",
+          icon: BarChart3,
         },
       ],
     },
@@ -229,6 +236,11 @@ export function AppSidebar({ ...props }) {
     {
       groupLabel: "SETTINGS & SYSTEM",
       items: [
+        {
+          label: "Notification Center",
+          href: "/notifications",
+          icon: Bell,
+        },
         {
           label: "Settings",
           href: "/settings",

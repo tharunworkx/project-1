@@ -69,6 +69,24 @@ textarea {
   font: inherit;
 }
 
+select {
+  color-scheme: light;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+.dark select option {
+  background-color: oklch(0.205 0 0);
+  color: oklch(0.985 0 0);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

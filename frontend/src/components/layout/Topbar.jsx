@@ -31,6 +31,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ModeToggle from "./ModeToggle";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBellDropdown from "../notifications/NotificationBellDropdown";
+import RoleSwitcher from "../common/RoleSwitcher";
 
 const routeNames = {
   "/": "Dashboard",
@@ -39,8 +41,15 @@ const routeNames = {
   "/expenses/new": "New Expense",
   "/approvals": "Approval Queue",
   "/reimbursements": "Reimbursements",
-  "/budgets": "Budgets",
-  "/reports": "Reports & Analytics",
+  "/finance/reimbursements": "Reimbursements",
+  "/budgets": "Budget Management",
+  "/finance/budgets": "Budget Management",
+  "/reports": "Financial Reports & Analytics",
+  "/finance/reports": "Financial Reports",
+  "/finance": "Finance Overview & Analytics",
+  "/finance/analytics": "Financial Analytics",
+  "/analytics": "Reports & Analytics",
+  "/notifications": "Notification Center",
   "/admin/users": "User Management",
   "/admin/departments": "Departments",
   "/admin/projects": "Projects",
@@ -108,15 +117,14 @@ export default function Topbar() {
             </div>
           </div>
 
+          {/* Role Persona Switcher (Person 3 Demo) */}
+          <RoleSwitcher />
+
           {/* Dark / Light Mode Toggle */}
           <ModeToggle />
 
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="size-9 relative flex items-center justify-center text-muted-foreground hover:text-foreground">
-            <Bell className="size-4.5" />
-            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive" />
-            <span className="sr-only">Notifications</span>
-          </Button>
+          {/* Live Notification Center Bell */}
+          <NotificationBellDropdown />
 
           {/* Profile Dropdown */}
           <DropdownMenu>

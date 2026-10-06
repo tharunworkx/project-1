@@ -14,6 +14,8 @@ import ApprovalQueue from "../pages/approvals/ApprovalQueue";
 import Reimbursements from "../pages/reimbursements/Reimbursements";
 import Budgets from "../pages/budgets/Budgets";
 import Reports from "../pages/reports/Reports";
+import FinanceDashboard from "../pages/finance/FinanceDashboard";
+import Notifications from "../pages/notifications/Notifications";
 import Settings from "../pages/settings/Settings";
 import Users from "../pages/administration/Users";
 import Departments from "../pages/administration/Departments";
@@ -56,12 +58,28 @@ export default function AppRoutes() {
           <Route path="/expenses/new" element={<CreateExpense />} />
           <Route path="/expenses/:id" element={<ExpenseDetails />} />
 
-          {/* Workflow */}
+          {/* Workflow & Person 3 Modules */}
           <Route path="/approvals" element={<ApprovalQueue />} />
+
+          {/* Reimbursements (both top-level and /finance routes) */}
           <Route path="/reimbursements" element={<Reimbursements />} />
+          <Route path="/finance/reimbursements" element={<Reimbursements />} />
+
+          {/* Budgets (both top-level and /finance routes) */}
           <Route path="/budgets" element={<Budgets />} />
+          <Route path="/finance/budgets" element={<Budgets />} />
+
+          {/* Reports (both top-level and /finance routes) */}
           <Route path="/reports" element={<Reports />} />
+          <Route path="/finance/reports" element={<Reports />} />
+
+          {/* Finance Hub & Financial Analytics */}
+          <Route path="/finance" element={<FinanceDashboard />} />
+          <Route path="/finance/analytics" element={<FinanceDashboard />} />
           <Route path="/analytics" element={<Reports />} />
+
+          {/* Notification Center */}
+          <Route path="/notifications" element={<Notifications />} />
 
           {/* Administration */}
           <Route path="/admin/users" element={<Users />} />
