@@ -34,6 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CustomSelect } from "@/components/ui/select";
 import Modal from '../../components/common/Modal';
 
 const defaultPolicies = [
@@ -340,29 +341,31 @@ export const Policies = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">Scope</label>
-              <select
+              <CustomSelect
                 value={formData.scope}
                 onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="All Departments">All Departments</option>
-                <option value="Sales Only">Sales Only</option>
-                <option value="Engineering">Engineering</option>
-                <option value="Executive">Executive</option>
-              </select>
+                triggerClassName="h-9 rounded-md text-xs"
+                options={[
+                  { value: "All Departments", label: "All Departments" },
+                  { value: "Sales Only", label: "Sales Only" },
+                  { value: "Engineering", label: "Engineering" },
+                  { value: "Executive", label: "Executive" },
+                ]}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">Rule Action</label>
-              <select
+              <CustomSelect
                 value={formData.severity}
                 onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="Soft Warning">Soft Warning</option>
-                <option value="Hard Block">Hard Block</option>
-                <option value="Audit Review">Flag for Manual Audit</option>
-              </select>
+                triggerClassName="h-9 rounded-md text-xs"
+                options={[
+                  { value: "Soft Warning", label: "Soft Warning" },
+                  { value: "Hard Block", label: "Hard Block" },
+                  { value: "Audit Review", label: "Flag for Manual Audit" },
+                ]}
+              />
             </div>
           </div>
 

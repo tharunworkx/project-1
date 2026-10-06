@@ -266,31 +266,28 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
-      {/* 1. Header: Fixed-origin minimize button anchored to side with white background & dynamic action icon */}
+      {/* 1. Header: Fixed-origin minimize button anchored to side with dynamic theme background & action icon */}
       <SidebarHeader className="h-16 border-b border-sidebar-border p-0 flex flex-row items-center justify-start overflow-hidden">
         <div className="w-12 h-16 flex items-center justify-center shrink-0">
           <button
             type="button"
             onClick={toggleSidebar}
             title={open ? "Collapse sidebar" : "Expand sidebar"}
-            className="size-9 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200/90 dark:border-zinc-700 shadow-xs hover:bg-zinc-50 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors cursor-pointer"
+            className="size-9 rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs flex items-center justify-center transition-colors cursor-pointer"
           >
             {open ? (
-              <PanelLeftClose className="size-4.5" />
+              <PanelLeftClose className="size-4.5 stroke-[2.2]" />
             ) : (
-              <PanelLeftOpen className="size-4.5" />
+              <PanelLeftOpen className="size-4.5 stroke-[2.2]" />
             )}
           </button>
         </div>
       </SidebarHeader>
 
-      {/* 2. Menu Navigation with Groups and Collapsible Nav Items */}
+      {/* 2. Menu Navigation without group title words */}
       <SidebarContent className="px-2 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2">
-        {navGroups.map((group) => (
-          <SidebarGroup key={group.groupLabel} className="py-1.5 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:my-0.5">
-            <SidebarGroupLabel className="text-sidebar-foreground/50 tracking-wider uppercase text-[10px] font-semibold px-2 mb-1 group-data-[collapsible=icon]:hidden">
-              {group.groupLabel}
-            </SidebarGroupLabel>
+        {navGroups.map((group, groupIdx) => (
+          <SidebarGroup key={group.groupLabel || groupIdx} className="py-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:my-0.5">
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {

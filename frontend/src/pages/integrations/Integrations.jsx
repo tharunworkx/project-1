@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/select";
 
 const mockIntegrations = [
   // Corporate Cards
@@ -469,19 +470,27 @@ export default function Integrations() {
             <div className="p-6 space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-foreground mb-1.5">Reconciliation Policy</label>
-                <select className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs">
-                  <option>Auto-match claims by transaction timestamp & exact amount</option>
-                  <option>Manual confirmation required for amounts above ₹10,000</option>
-                  <option>Strict merchant name OCR and tax invoice verification</option>
-                </select>
+                <CustomSelect
+                  defaultValue="Auto-match claims by transaction timestamp & exact amount"
+                  className="h-10 text-xs"
+                  options={[
+                    { value: "Auto-match claims by transaction timestamp & exact amount", label: "Auto-match claims by transaction timestamp & exact amount" },
+                    { value: "Manual confirmation required for amounts above ₹10,000", label: "Manual confirmation required for amounts above ₹10,000" },
+                    { value: "Strict merchant name OCR and tax invoice verification", label: "Strict merchant name OCR and tax invoice verification" },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block font-semibold text-foreground mb-1.5">Scheduled Sync Frequency</label>
-                <select className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs">
-                  <option>Real-time (Webhooks push)</option>
-                  <option>Hourly background batch sync</option>
-                  <option>Daily at 23:59 IST</option>
-                </select>
+                <CustomSelect
+                  defaultValue="Real-time (Webhooks push)"
+                  className="h-10 text-xs"
+                  options={[
+                    { value: "Real-time (Webhooks push)", label: "Real-time (Webhooks push)" },
+                    { value: "Hourly background batch sync", label: "Hourly background batch sync" },
+                    { value: "Daily at 23:59 IST", label: "Daily at 23:59 IST" },
+                  ]}
+                />
               </div>
               <div className="p-3 rounded-xl bg-muted/40 border border-border space-y-1">
                 <span className="font-bold text-foreground block">Notification Alerts</span>
@@ -537,12 +546,16 @@ export default function Integrations() {
             <div className="p-6 space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-foreground mb-1.5">Event Type</label>
-                <select className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs">
-                  <option>expense.approved</option>
-                  <option>reimbursement.settled</option>
-                  <option>fraud.flagged</option>
-                  <option>budget.threshold_reached</option>
-                </select>
+                <CustomSelect
+                  defaultValue="expense.approved"
+                  className="h-10 text-xs"
+                  options={[
+                    { value: "expense.approved", label: "expense.approved" },
+                    { value: "reimbursement.settled", label: "reimbursement.settled" },
+                    { value: "fraud.flagged", label: "fraud.flagged" },
+                    { value: "budget.threshold_reached", label: "budget.threshold_reached" },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block font-semibold text-foreground mb-1.5">Sample Payload Preview</label>

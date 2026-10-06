@@ -1,15 +1,25 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   UploadCloud,
-  CheckCircle,
+  CheckCircle2,
   AlertTriangle,
   FileText,
   X,
   ArrowLeft,
-  DollarSign
+  DollarSign,
+  Receipt,
+  Building,
+  Calendar,
+  Layers,
+  Send,
 } from 'lucide-react';
-import Button from '../../components/common/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { CustomSelect } from "@/components/ui/select";
+import { CustomDatePicker } from "@/components/ui/date-picker";
 import expenseService from '../../services/expenseService';
 
 export const CreateExpense = () => {
@@ -19,9 +29,9 @@ export const CreateExpense = () => {
   const [formData, setFormData] = useState({
     merchant: '',
     title: '',
-    category: 'Travel',
+    category: 'Travel & Flights',
     amount: '',
-    currency: 'USD',
+    currency: 'INR',
     date: new Date().toISOString().split('T')[0],
     department: 'Engineering',
     project: 'PRJ-Alpha (Cloud Migration)',
@@ -41,310 +51,333 @@ export const CreateExpense = () => {
     }
   };
 
+  const removeFile = (e) => {
+    e.stopPropagation();
+    setReceiptFile(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       await expenseService.createExpense({
         ...formData,
-        amount: parseFloat(formData.amount),
+        amount: parseFloat(formData.amount) || 0,
         receiptAttached: !!receiptFile,
       });
       navigate('/expenses');
     } catch (err) {
       console.warn('API error, saving mock claim:', err);
-      // Fallback navigate to expenses
       navigate('/expenses');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Real-time policy checking
   const numAmount = parseFloat(formData.amount) || 0;
-  const isHighSpend = numAmount > 1000;
-  const isMealPerDiemExceeded = formData.category === 'Meals' && numAmount > 75;
+  const isHighSpend = numAmount > 25000;
+  const isMealCapExceeded = formData.category === 'Meals & Entertainment' && numAmount > 5000;
 
   return (
-    <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
-      {/* Navigation & Header */}
-      <div>
-        <button
-          onClick={() => navigate('/expenses')}
-          style={{
-            background: 'none',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            marginBottom: '0.5rem',
-          }}
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+      {/* Header and Back Button */}
+      <div className="flex flex-col gap-2">
+        <Link
+          to="/expenses"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
-          <ArrowLeft size={16} />
-          Back to Expenses
-        </button>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-          Submit New Expense Claim
-        </h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-          Enter invoice or receipt specifics for audit, manager sign-off, and reimbursement.
-        </p>
+          <ArrowLeft className="size-4" />
+          <span>Back to Expenses</span>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Submit New Expense Claim
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Enter invoice or receipt specifics for audit, manager sign-off, and reimbursement.
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Main Details Card */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Expense Information</h3>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* Main Expense Information Card */}
+        <Card className="shadow-xs border-border overflow-visible">
+          <CardHeader className="p-5 pb-3 border-b border-border">
+            <CardTitle className="text-base font-semibold">Expense Information</CardTitle>
+            <CardDescription className="text-xs">
+              Provide invoice metadata, merchant details, and cost allocation.
+            </CardDescription>
+          </CardHeader>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="merchant">Merchant / Vendor *</label>
-              <input
-                id="merchant"
-                name="merchant"
-                type="text"
-                required
-                value={formData.merchant}
-                onChange={handleChange}
-                placeholder="e.g. Delta Airlines, AWS, Uber"
-                className="form-input"
-              />
-            </div>
-
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="title">Short Purpose / Title *</label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                required
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="e.g. Flight to Tech Summit, Server Renewal"
-                className="form-input"
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="category">Category *</label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="form-select"
-              >
-                <option value="Travel">Travel & Flights</option>
-                <option value="Lodging">Hotel & Lodging</option>
-                <option value="Meals">Meals & Entertainment</option>
-                <option value="Software">Software & Subscriptions</option>
-                <option value="Hardware">Hardware & Equipment</option>
-                <option value="Office Supplies">Office Supplies</option>
-              </select>
-            </div>
-
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="amount">Amount *</label>
-              <div style={{ position: 'relative' }}>
-                <DollarSign size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                <input
-                  id="amount"
-                  name="amount"
-                  type="number"
-                  step="0.01"
+          <CardContent className="p-5 space-y-4 overflow-visible">
+            {/* Row 1: Merchant & Title */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="merchant">
+                  Merchant / Vendor <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="merchant"
+                  name="merchant"
+                  type="text"
                   required
-                  value={formData.amount}
+                  value={formData.merchant}
                   onChange={handleChange}
-                  placeholder="0.00"
-                  className="form-input"
-                  style={{ paddingLeft: '2.2rem' }}
+                  placeholder="e.g. Delta Airlines, AWS, Uber"
+                  className="h-10 text-xs sm:text-sm rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="title">
+                  Short Purpose / Title <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="title"
+                  name="title"
+                  type="text"
+                  required
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="e.g. Flight to Tech Summit, Server Cloud Hosting"
+                  className="h-10 text-xs sm:text-sm rounded-lg"
                 />
               </div>
             </div>
 
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="date">Expense Date *</label>
-              <input
-                id="date"
-                name="date"
-                type="date"
-                required
-                value={formData.date}
-                onChange={handleChange}
-                className="form-input"
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="department">Department</label>
-              <select
-                id="department"
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                className="form-select"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Product & Design">Product & Design</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Sales">Sales</option>
-                <option value="Finance & Ops">Finance & Ops</option>
-              </select>
-            </div>
-
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="project">Project Code / Allocation</label>
-              <select
-                id="project"
-                name="project"
-                value={formData.project}
-                onChange={handleChange}
-                className="form-select"
-              >
-                <option value="PRJ-Alpha (Cloud Migration)">PRJ-Alpha (Cloud Migration)</option>
-                <option value="PRJ-Beta (Mobile App)">PRJ-Beta (Mobile App)</option>
-                <option value="PRJ-Gamma (Enterprise Sales)">PRJ-Gamma (Enterprise Sales)</option>
-                <option value="General Overhead">General Corporate Overhead</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" htmlFor="description">Business Justification / Notes</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Explain how this expense benefits company operations or customer deliverables..."
-              className="form-textarea"
-              rows={3}
-            />
-          </div>
-        </div>
-
-        {/* Receipt Upload Dropzone */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Receipt & Invoices</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-            Upload PDF, PNG, JPG receipts (Max 10MB). Company policy requires receipts for all expenses over $25.
-          </p>
-
-          {!receiptFile ? (
-            <label
-              style={{
-                border: '2px dashed var(--border-strong)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '2.5rem 1.5rem',
-                textAlign: 'center',
-                cursor: 'pointer',
-                backgroundColor: '#f8fafc',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.75rem',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '50%',
-                  backgroundColor: '#eef2ff',
-                  color: 'var(--primary-600)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <UploadCloud size={24} />
-              </div>
+            {/* Row 2: Category, Amount, Expense Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <span style={{ fontWeight: 700, color: 'var(--primary-600)' }}>Click to upload</span>
-                <span style={{ color: 'var(--text-muted)' }}> or drag and drop receipt file</span>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="category">
+                  Category <span className="text-destructive">*</span>
+                </label>
+                <CustomSelect
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  triggerClassName="h-10 rounded-lg text-xs sm:text-sm bg-card border-border"
+                  options={[
+                    { value: "Travel & Flights", label: "Travel & Flights" },
+                    { value: "Lodging & Hotels", label: "Lodging & Hotels" },
+                    { value: "Meals & Entertainment", label: "Meals & Entertainment" },
+                    { value: "Software & Cloud", label: "Software & Cloud" },
+                    { value: "Office Supplies", label: "Office Supplies" },
+                    { value: "Mileage & Transit", label: "Mileage & Transit" },
+                    { value: "Professional Services", label: "Professional Services" },
+                  ]}
+                />
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>PDF, PNG, JPG, or WEBP up to 10MB</span>
-              <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept="image/*,.pdf" />
-            </label>
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.85rem 1.25rem',
-                backgroundColor: '#f1f5f9',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <FileText size={22} color="var(--primary-600)" />
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor' }}>{receiptFile.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{(receiptFile.size / 1024).toFixed(1)} KB</div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="amount">
+                  Amount <span className="text-destructive">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                    ₹
+                  </span>
+                  <Input
+                    id="amount"
+                    name="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={formData.amount}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    className="h-10 pl-7 text-xs sm:text-sm rounded-lg font-mono font-medium"
+                  />
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setReceiptFile(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                }}
-              >
-                <X size={18} />
-              </button>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="date">
+                  Expense Date <span className="text-destructive">*</span>
+                </label>
+                <CustomDatePicker
+                  id="date"
+                  name="date"
+                  required
+                  value={formData.date}
+                  onChange={handleChange}
+                  className="h-10 text-xs sm:text-sm rounded-lg"
+                />
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Real-time Policy Compliance Box */}
-        <div
-          style={{
-            backgroundColor: isMealPerDiemExceeded || isHighSpend ? 'var(--warning-bg)' : 'var(--success-bg)',
-            border: `1px solid ${isMealPerDiemExceeded || isHighSpend ? 'var(--warning-border)' : 'var(--success-border)'}`,
-            borderRadius: 'var(--radius-md)',
-            padding: '1rem 1.25rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.85rem', color: isMealPerDiemExceeded || isHighSpend ? 'var(--warning-text)' : 'var(--success-text)' }}>
-            {isMealPerDiemExceeded || isHighSpend ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
-            Automated Policy Compliance Assessment
+            {/* Row 3: Department & Project Allocation */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="department">
+                  Department
+                </label>
+                <CustomSelect
+                  id="department"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  triggerClassName="h-10 rounded-lg text-xs sm:text-sm bg-card border-border"
+                  options={[
+                    { value: "Engineering", label: "Engineering" },
+                    { value: "Product & Design", label: "Product & Design" },
+                    { value: "Marketing", label: "Marketing" },
+                    { value: "Sales", label: "Sales" },
+                    { value: "Finance & Ops", label: "Finance & Ops" },
+                    { value: "HR & Admin", label: "HR & Admin" },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="project">
+                  Project Code / Allocation
+                </label>
+                <CustomSelect
+                  id="project"
+                  name="project"
+                  value={formData.project}
+                  onChange={handleChange}
+                  triggerClassName="h-10 rounded-lg text-xs sm:text-sm bg-card border-border"
+                  options={[
+                    { value: "PRJ-Alpha (Cloud Migration)", label: "PRJ-Alpha (Cloud Migration)" },
+                    { value: "PRJ-Beta (Mobile App Redesign)", label: "PRJ-Beta (Mobile App Redesign)" },
+                    { value: "PRJ-Gamma (Enterprise Onboarding)", label: "PRJ-Gamma (Enterprise Onboarding)" },
+                    { value: "PRJ-Internal (General Operations)", label: "PRJ-Internal (General Operations)" },
+                  ]}
+                />
+              </div>
+            </div>
+
+            {/* Row 4: Business Justification */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5" htmlFor="description">
+                Business Justification / Notes
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={3}
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Explain how this expense benefits company operations, customer success, or project delivery..."
+                className="w-full p-3 rounded-lg border border-border bg-card text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-y leading-relaxed"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Real-time Policy Screening Callout if triggered */}
+        {(isHighSpend || isMealCapExceeded) && (
+          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-3 animate-in fade-in">
+            <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="space-y-1">
+              <span className="font-bold block">Policy Flag Notice</span>
+              {isHighSpend && (
+                <p>Expenses exceeding ₹25,000 require dual approval from Department Head and Finance VP.</p>
+              )}
+              {isMealCapExceeded && (
+                <p>Meal claim exceeds standard single-meal limit of ₹5,000. Please attach an itemized guest list in notes.</p>
+              )}
+            </div>
           </div>
-          <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <li>Receipt Requirement: {receiptFile ? 'Compliant (Receipt attached)' : (numAmount > 25 ? 'Warning: Required for claims > $25' : 'Compliant (Under $25 threshold)')}</li>
-            {isMealPerDiemExceeded && (
-              <li style={{ color: '#b45309', fontWeight: 600 }}>Policy Warning: Meals exceeding $75/day require manager pre-approval.</li>
-            )}
-            {isHighSpend && (
-              <li style={{ color: '#b45309', fontWeight: 600 }}>Policy Notice: Expenses &gt; $1,000 will require secondary Finance VP sign-off.</li>
-            )}
-          </ul>
-        </div>
+        )}
 
-        {/* Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-          <Button variant="secondary" size="md" onClick={() => navigate('/expenses')}>
+        {/* Receipt & Invoices Dropzone Card */}
+        <Card className="shadow-xs border-border">
+          <CardHeader className="p-5 pb-3 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold">Receipt & Invoices</CardTitle>
+                <CardDescription className="text-xs">
+                  Upload PDF, PNG, or JPG receipts (Max 10MB). Company policy requires receipts for all expenses over ₹500.
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-[11px]">
+                OCR Scan Enabled
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-5">
+            <div className="relative">
+              <input
+                id="receiptUpload"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {!receiptFile ? (
+                <label
+                  htmlFor="receiptUpload"
+                  className="border-2 border-dashed border-border hover:border-foreground/40 bg-muted/20 hover:bg-muted/40 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all group"
+                >
+                  <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform mb-3">
+                    <UploadCloud className="size-6" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">
+                    Click to upload receipt, or drag and drop
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PDF, PNG, JPG, or WEBP up to 10MB
+                  </p>
+                </label>
+              ) : (
+                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                      <FileText className="size-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-foreground block truncate max-w-sm">
+                        {receiptFile.name}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground font-mono">
+                        {(receiptFile.size / 1024).toFixed(1)} KB • Ready for OCR verification
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeFile}
+                    className="size-8 p-0 rounded-full text-muted-foreground hover:text-destructive cursor-pointer"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/expenses')}
+            className="text-xs h-10 px-4 cursor-pointer"
+          >
             Cancel
           </Button>
-          <Button type="submit" variant="primary" size="md" loading={submitting}>
-            Submit Claim for Approval
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="text-xs h-10 px-5 gap-2 cursor-pointer bg-foreground text-background hover:bg-foreground/90 font-medium"
+          >
+            {submitting ? (
+              <span>Submitting Claim...</span>
+            ) : (
+              <>
+                <Send className="size-3.5" />
+                <span>Submit Expense Claim</span>
+              </>
+            )}
           </Button>
         </div>
       </form>

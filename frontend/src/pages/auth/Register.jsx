@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wallet, User, Mail, Lock, Building, ArrowRight } from 'lucide-react';
-import Button from '../../components/common/Button';
+import {
+  Wallet,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Building,
+  Shield,
+  ArrowRight,
+  AlertCircle,
+} from 'lucide-react';
+import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
+import { CustomSelect } from '@/components/ui/select';
 import { useAuth } from '../../context/AuthContext';
 
 export const Register = () => {
@@ -17,6 +29,8 @@ export const Register = () => {
     confirmPassword: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
@@ -44,76 +58,55 @@ export const Register = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem 1.5rem',
-        backgroundImage: 'radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.1) 0px, transparent 50%)',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '500px',
-          backgroundColor: '#ffffff',
-          borderRadius: 'var(--radius-xl)',
-          boxShadow: 'var(--shadow-xl)',
-          padding: '2.5rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-        }}
-        className="animate-fade-in"
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'var(--primary-gradient)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              marginBottom: '1rem',
-              boxShadow: '0 8px 16px rgba(99, 102, 241, 0.35)',
-            }}
-          >
-            <Wallet size={26} />
+    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-black overflow-hidden select-none">
+      {/* Background Animated Glowing Dots Pattern on Pure Black */}
+      <DottedGlowBackground
+        className="pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_90%)]"
+        opacity={0.85}
+        gap={14}
+        radius={1.7}
+        color="rgba(120, 120, 120, 0.4)"
+        darkColor="rgba(140, 140, 140, 0.35)"
+        glowColor="rgba(159, 232, 112, 0.85)"
+        darkGlowColor="rgba(159, 232, 112, 0.85)"
+        backgroundOpacity={0}
+        speedMin={0.3}
+        speedMax={1.4}
+        speedScale={1}
+      />
+
+      {/* Modern High-Contrast Sign Up Card */}
+      <div className="relative z-10 w-full max-w-[420px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200/80 dark:border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="text-center mb-5">
+          <div className="inline-flex size-11 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm mb-3">
+            <Wallet className="size-5" />
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 0.25rem 0' }}>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">
             Create Your Account
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0 }}>
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-normal">
             Join your organization's expense management platform
           </p>
         </div>
 
+        {/* Error Notification */}
         {error && (
-          <div
-            style={{
-              backgroundColor: 'var(--danger-bg)',
-              color: 'var(--danger-text)',
-              border: '1px solid var(--danger-border)',
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.85rem',
-            }}
-          >
-            {error}
+          <div className="mb-4 flex items-center gap-2 p-2.5 text-xs rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300">
+            <AlertCircle className="size-3.5 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" htmlFor="name">Full Name</label>
-            <div style={{ position: 'relative' }}>
-              <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Full Name */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="name">
+              Full Name
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
               <input
                 id="name"
                 name="name"
@@ -122,16 +115,18 @@ export const Register = () => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Jane Doe"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem' }}
+                className="w-full h-10 pl-9.5 pr-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-300 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
               />
             </div>
           </div>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" htmlFor="reg-email">Work Email</label>
-            <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          {/* Work Email */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="reg-email">
+              Work Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
               <input
                 id="reg-email"
                 name="email"
@@ -140,93 +135,108 @@ export const Register = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="jane.doe@company.com"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem' }}
+                className="w-full h-10 pl-9.5 pr-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-300 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
               />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="department">Department</label>
-              <select
-                id="department"
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                className="form-select"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Product & Design">Product & Design</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Sales">Sales</option>
-                <option value="Finance">Finance</option>
-                <option value="Operations">Operations</option>
-              </select>
-            </div>
-
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="role">Role</label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="form-select"
-              >
-                <option value="Employee">Employee</option>
-                <option value="Manager">Manager</option>
-                <option value="Finance Admin">Finance Admin</option>
-              </select>
-            </div>
+          {/* Role Field (Department removed as requested) */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="role">
+              Role
+            </label>
+            <CustomSelect
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              triggerClassName="h-10 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100"
+              options={[
+                { value: "Employee", label: "Employee" },
+                { value: "Manager", label: "Manager" },
+                { value: "Finance Admin", label: "Finance Admin" },
+              ]}
+            />
           </div>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" htmlFor="reg-password">Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          {/* Password */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="reg-password">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
               <input
                 id="reg-password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="••••••••"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem' }}
+                placeholder="••••••••••••"
+                className="w-full h-10 pl-9.5 pr-9 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-300 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
           </div>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" htmlFor="confirmPassword">Confirm Password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="confirmPassword">
+              Confirm Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
               <input
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="••••••••"
-                className="form-input"
-                style={{ paddingLeft: '2.5rem' }}
+                placeholder="••••••••••••"
+                className="w-full h-10 pl-9.5 pr-9 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-300 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                title={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
           </div>
 
-          <Button type="submit" variant="primary" size="lg" loading={loading} icon={ArrowRight} iconPosition="right" style={{ marginTop: '0.5rem' }}>
-            Complete Registration
-          </Button>
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-10 rounded-lg bg-[#1c1c1e] hover:bg-black active:scale-[0.99] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-medium text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-60"
+          >
+            <span>{loading ? 'Creating Account...' : 'Complete Registration'}</span>
+            <ArrowRight className="size-4" />
+          </button>
         </form>
 
-        <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ fontWeight: 700, color: 'var(--primary-600)' }}>
-            Sign In
-          </Link>
+        {/* Footer Link */}
+        <div className="mt-4 text-center">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className="font-semibold text-zinc-900 dark:text-zinc-100 underline hover:text-zinc-700"
+            >
+              Sign In
+            </Link>
+          </p>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CustomSelect } from "@/components/ui/select";
 import { useAuth } from '../../context/AuthContext';
 
 export const Settings = () => {
@@ -184,18 +185,19 @@ export const Settings = () => {
               <label className="text-xs font-semibold text-foreground">
                 Preferred Reporting Currency
               </label>
-              <select
+              <CustomSelect
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full h-9 rounded-xl border border-input bg-muted/30 px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background"
-              >
-                <option value="INR (₹)">INR - Indian Rupee (₹)</option>
-                <option value="USD ($)">USD - US Dollar ($)</option>
-                <option value="EUR (€)">EUR - Euro (€)</option>
-                <option value="GBP (£)">GBP - British Pound (£)</option>
-                <option value="CAD ($)">CAD - Canadian Dollar ($)</option>
-                <option value="JPY (¥)">JPY - Japanese Yen (¥)</option>
-              </select>
+                triggerClassName="h-9 rounded-xl text-xs"
+                options={[
+                  { value: "INR (₹)", label: "INR - Indian Rupee (₹)" },
+                  { value: "USD ($)", label: "USD - US Dollar ($)" },
+                  { value: "EUR (€)", label: "EUR - Euro (€)" },
+                  { value: "GBP (£)", label: "GBP - British Pound (£)" },
+                  { value: "CAD ($)", label: "CAD - Canadian Dollar ($)" },
+                  { value: "JPY (¥)", label: "JPY - Japanese Yen (¥)" },
+                ]}
+              />
               <p className="text-[11px] text-muted-foreground pt-1">
                 All ledger conversions and claim valuations will reference this standard.
               </p>

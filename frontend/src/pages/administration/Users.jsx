@@ -34,6 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CustomSelect } from "@/components/ui/select";
 import Modal from '../../components/common/Modal';
 
 const initialUsers = [
@@ -388,32 +389,34 @@ export const Users = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">Role</label>
-              <select
+              <CustomSelect
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="Employee">Employee</option>
-                <option value="Manager">Manager</option>
-                <option value="Finance Admin">Finance Admin</option>
-                <option value="Admin">Admin</option>
-              </select>
+                triggerClassName="h-9 rounded-md text-xs"
+                options={[
+                  { value: "Employee", label: "Employee" },
+                  { value: "Manager", label: "Manager" },
+                  { value: "Finance Admin", label: "Finance Admin" },
+                  { value: "Admin", label: "Admin" },
+                ]}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">Department</label>
-              <select
+              <CustomSelect
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Sales">Sales</option>
-                <option value="Product & Design">Product & Design</option>
-                <option value="Finance & Accounts">Finance & Accounts</option>
-                <option value="Operations">Operations</option>
-              </select>
+                triggerClassName="h-9 rounded-md text-xs"
+                options={[
+                  { value: "Engineering", label: "Engineering" },
+                  { value: "Marketing", label: "Marketing" },
+                  { value: "Sales", label: "Sales" },
+                  { value: "Product & Design", label: "Product & Design" },
+                  { value: "Finance & Accounts", label: "Finance & Accounts" },
+                  { value: "Operations", label: "Operations" },
+                ]}
+              />
             </div>
           </div>
 

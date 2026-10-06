@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/select";
 import Modal from '../../components/common/Modal';
 
 const initialBudgets = [
@@ -355,16 +356,17 @@ export const Budgets = () => {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">Quarterly Period</label>
-              <select
+              <CustomSelect
                 value={formData.period}
                 onChange={(e) => setFormData({ ...formData, period: e.target.value })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="Q1 2026">Q1 2026</option>
-                <option value="Q2 2026">Q2 2026</option>
-                <option value="Q3 2026">Q3 2026</option>
-                <option value="Q4 2026">Q4 2026</option>
-              </select>
+                triggerClassName="h-9 rounded-md text-xs"
+                options={[
+                  { value: "Q1 2026", label: "Q1 2026" },
+                  { value: "Q2 2026", label: "Q2 2026" },
+                  { value: "Q3 2026", label: "Q3 2026" },
+                  { value: "Q4 2026", label: "Q4 2026" },
+                ]}
+              />
             </div>
           </div>
 

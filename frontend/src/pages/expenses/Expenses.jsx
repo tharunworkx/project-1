@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CustomSelect } from "@/components/ui/select";
 
 const mockExpenses = [
   {
@@ -215,16 +216,17 @@ export const Expenses = () => {
                 className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
               />
             </div>
-            <select
+            <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded-full border border-border/80 bg-muted/50 px-3 text-xs text-foreground outline-none shadow-xs"
-            >
-              <option value="ALL">All Status</option>
-              <option value="APPROVED">Approved</option>
-              <option value="PENDING">Pending</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+              triggerClassName="h-8 rounded-full border border-border/80 bg-muted/50 px-3 text-xs w-[125px]"
+              options={[
+                { value: "ALL", label: "All Status" },
+                { value: "APPROVED", label: "Approved" },
+                { value: "PENDING", label: "Pending" },
+                { value: "REJECTED", label: "Rejected" },
+              ]}
+            />
           </div>
         </CardHeader>
 

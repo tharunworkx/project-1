@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -12,10 +12,12 @@ import {
   User,
   Calendar,
   CreditCard,
-  MessageSquare
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
-import Button from '../../components/common/Button';
-import Badge from '../../components/common/Badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import Modal from '../../components/common/Modal';
 
 export const ExpenseDetails = () => {
@@ -30,9 +32,9 @@ export const ExpenseDetails = () => {
     id: id || 'EXP-2026-080',
     merchant: 'Amazon Web Services',
     title: 'Production Cluster Compute & Storage',
-    amount: 1249.00,
-    currency: 'USD',
-    date: '2026-03-27',
+    amount: 104200.00,
+    currency: 'INR',
+    date: '04 Oct 2026',
     category: 'Software & Cloud',
     department: 'DevOps & Infrastructure',
     project: 'PRJ-Alpha (Cloud Migration)',
@@ -45,9 +47,9 @@ export const ExpenseDetails = () => {
     justification: 'Quarterly compute overage charges for multi-region active replication cluster supporting enterprise onboarding phase.',
     receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600',
     auditHistory: [
-      { step: 'Claim Submitted', user: 'David Kim', time: 'March 27, 2026, 09:14 AM', status: 'completed' },
-      { step: 'Automated Policy Screening', user: 'System Bot', time: 'March 27, 2026, 09:15 AM', status: 'completed' },
-      { step: 'Manager Review', user: 'Sarah Connor', time: 'March 27, 2026, 02:40 PM', status: 'completed' },
+      { step: 'Claim Submitted', user: 'David Kim', time: '04 Oct 2026, 09:14 AM', status: 'completed' },
+      { step: 'Automated Policy Screening', user: 'System AI Engine', time: '04 Oct 2026, 09:15 AM', status: 'completed' },
+      { step: 'Manager Review', user: 'James Wilson', time: '04 Oct 2026, 02:40 PM', status: 'completed' },
       { step: 'Finance VP Approval', user: 'Alex Morgan', time: 'Awaiting Sign-off', status: 'current' },
       { step: 'Payout Disbursement', user: 'Automated Batch', time: 'Pending prior sign-offs', status: 'upcoming' },
     ],
@@ -63,249 +65,277 @@ export const ExpenseDetails = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '1100px', margin: '0 auto' }} className="animate-fade-in">
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
       {/* Header Bar */}
-      <div>
-        <button
-          onClick={() => navigate('/expenses')}
-          style={{
-            background: 'none',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            marginBottom: '0.5rem',
-          }}
-        >
-          <ArrowLeft size={16} />
-          Back to Expenses
-        </button>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <Link
+            to="/expenses"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors w-fit"
+          >
+            <ArrowLeft className="size-4" />
+            <span>Back to Expenses</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {expense.id}
-            </h2>
-            <Badge variant={status === 'Approved' ? 'success' : status === 'Rejected' ? 'danger' : 'warning'} dot size="lg">
+            </h1>
+            <Badge
+              variant="outline"
+              className={
+                status === 'Approved'
+                  ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                  : status === 'Rejected'
+                  ? 'border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10'
+                  : 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10'
+              }
+            >
               {status}
             </Badge>
           </div>
+        </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            {status === 'Pending' && (
-              <>
-                <Button variant="danger" size="md" icon={XCircle} onClick={() => setRejectModalOpen(true)}>
-                  Reject Claim
-                </Button>
-                <Button variant="success" size="md" icon={CheckCircle2} onClick={handleApprove}>
-                  Approve Claim
-                </Button>
-              </>
-            )}
-            <Button variant="secondary" size="md" icon={Download}>
-              Download Receipt
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          {status === 'Pending' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRejectModalOpen(true)}
+                className="text-xs h-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer"
+              >
+                <XCircle className="size-3.5 mr-1.5" />
+                <span>Reject Claim</span>
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleApprove}
+                className="text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+              >
+                <CheckCircle2 className="size-3.5 mr-1.5" />
+                <span>Approve Claim</span>
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="text-xs h-9 cursor-pointer"
+          >
+            <a href={expense.receiptUrl} target="_blank" rel="noreferrer">
+              <Download className="size-3.5 mr-1.5" />
+              <span>Download Invoice</span>
+            </a>
+          </Button>
         </div>
       </div>
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-        {/* Left Column: Details & Audit */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (2 Cols): Details & Audit */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Summary Card */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Merchant & Purpose
-                </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'currentColor', margin: '0.1rem 0' }}>
-                  {expense.merchant}
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: '#475569', margin: 0 }}>{expense.title}</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Total Amount
-                </span>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-600)' }}>
-                  ${expense.amount.toFixed(2)}
+          <Card className="shadow-xs border-border">
+            <CardHeader className="p-5 pb-4 border-b border-border">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Merchant & Purpose
+                  </span>
+                  <h2 className="text-xl font-bold text-foreground mt-0.5">
+                    {expense.merchant}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{expense.title}</p>
                 </div>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Claimant</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-                  <img src={expense.claimant.avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor' }}>{expense.claimant.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{expense.claimant.role}</div>
+                <div className="text-right">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Total Amount
+                  </span>
+                  <div className="text-2xl font-black text-foreground mt-0.5">
+                    ₹{expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
+            </CardHeader>
 
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Department</span>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor', marginTop: '0.2rem' }}>
-                  {expense.department}
-                </div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Category</span>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor', marginTop: '0.2rem' }}>
-                  {expense.category}
-                </div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Expense Date</span>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor', marginTop: '0.2rem' }}>
-                  {expense.date}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
-                Business Justification
-              </span>
-              <p style={{ fontSize: '0.875rem', color: '#334155', marginTop: '0.35rem', lineHeight: '1.6' }}>
-                {expense.justification}
-              </p>
-            </div>
-          </div>
-
-          {/* Audit Timeline */}
-          <div className="card">
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem 0' }}>Approval Workflow & Audit Trail</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {expense.auditHistory.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  <div
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      backgroundColor: item.status === 'completed' ? '#ecfdf5' : item.status === 'current' ? '#eff6ff' : '#f8fafc',
-                      color: item.status === 'completed' ? '#059669' : item.status === 'current' ? '#2563eb' : '#94a3b8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.status === 'completed' ? <CheckCircle2 size={16} /> : <Clock size={14} />}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor' }}>{item.step}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.time}</span>
+            <CardContent className="p-5 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Claimant</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <img
+                      src={expense.claimant.avatar}
+                      alt=""
+                      className="size-6 rounded-full border border-border"
+                    />
+                    <div className="truncate">
+                      <div className="font-semibold text-foreground truncate">{expense.claimant.name}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{expense.claimant.role}</div>
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assigned / Handled by: {item.user}</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Department</span>
+                  <div className="font-semibold text-foreground mt-1.5">{expense.department}</div>
+                </div>
+
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Category</span>
+                  <div className="font-semibold text-foreground mt-1.5">{expense.category}</div>
+                </div>
+
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Expense Date</span>
+                  <div className="font-semibold text-foreground mt-1.5 font-mono">{expense.date}</div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-border">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  Business Justification
+                </span>
+                <p className="text-xs text-foreground/90 leading-relaxed bg-muted/30 p-3 rounded-lg border border-border/60">
+                  {expense.justification}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Audit Timeline Card */}
+          <Card className="shadow-xs border-border">
+            <CardHeader className="p-5 pb-3 border-b border-border">
+              <CardTitle className="text-base font-semibold">Approval Workflow & Audit Trail</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5">
+              <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
+                {expense.auditHistory.map((item, idx) => (
+                  <div key={idx} className="relative">
+                    <div
+                      className={`absolute -left-6 top-1 size-4 rounded-full border-2 border-background flex items-center justify-center ${
+                        item.status === 'completed'
+                          ? 'bg-emerald-500'
+                          : item.status === 'current'
+                          ? 'bg-primary'
+                          : 'bg-muted-foreground/30'
+                      }`}
+                    >
+                      <div className="size-1 rounded-full bg-white" />
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-border bg-card text-xs flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-foreground block">{item.step}</span>
+                        <span className="text-[11px] text-muted-foreground mt-0.5 block">
+                          Handled by: <span className="text-foreground font-medium">{item.user}</span>
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-mono">{item.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Right Column: Receipt Preview & Compliance */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Policy Compliance Checklist */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Policy Checklist</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8125rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#059669' }}>
-                <CheckCircle2 size={16} /> Valid tax invoice attached
+        {/* Right Column (1 Col): Receipt Preview & Compliance */}
+        <div className="flex flex-col gap-6">
+          {/* Policy Compliance Card */}
+          <Card className="shadow-xs border-border">
+            <CardHeader className="p-5 pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold">Policy Compliance Verification</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-2.5 text-xs">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="size-4 shrink-0" />
+                <span>Valid tax invoice attached</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#059669' }}>
-                <CheckCircle2 size={16} /> Within project allocation limits
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="size-4 shrink-0" />
+                <span>Within project allocation limits</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#d97706' }}>
-                <AlertCircle size={16} /> Over $1,000 threshold (Requires VP)
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <AlertCircle className="size-4 shrink-0" />
+                <span>Over ₹25,000 threshold (Requires VP)</span>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Receipt Preview */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Receipt Document</h4>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>invoice-aws-10294.pdf</span>
-            </div>
-            <div
-              style={{
-                borderRadius: 'var(--radius-md)',
-                overflow: 'hidden',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: '#f8fafc',
-                position: 'relative',
-              }}
-            >
-              <img
-                src={expense.receiptUrl}
-                alt="Receipt Scan"
-                style={{ width: '100%', height: '260px', objectFit: 'cover' }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  padding: '0.5rem 1rem',
-                  backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                  color: '#ffffff',
-                  fontSize: '0.75rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span>Verified OCR Scan</span>
-                <a href={expense.receiptUrl} target="_blank" rel="noreferrer" style={{ color: '#818cf8', fontWeight: 600 }}>
-                  View Full
-                </a>
+          {/* Receipt Document Card */}
+          <Card className="shadow-xs border-border overflow-hidden">
+            <CardHeader className="p-5 pb-3 border-b border-border flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold">Attached Invoice</CardTitle>
+                <CardDescription className="text-[11px]">invoice-aws-10294.pdf</CardDescription>
               </div>
-            </div>
-          </div>
+              <Badge variant="outline" className="text-[10px]">
+                Verified
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-0 relative">
+              <div className="relative group overflow-hidden bg-muted/40 aspect-4/3 flex items-center justify-center">
+                <img
+                  src={expense.receiptUrl}
+                  alt="Receipt Scan"
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <a
+                    href={expense.receiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-white text-zinc-900 text-xs font-semibold flex items-center gap-1.5 shadow-md"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    <span>View Full Size</span>
+                  </a>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Reject Reason Modal */}
+      {/* Reject Modal */}
       <Modal
         isOpen={rejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
         title="Reject Expense Claim"
         footer={
-          <>
-            <Button variant="secondary" size="md" onClick={() => setRejectModalOpen(false)}>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRejectModalOpen(false)}
+              className="text-xs cursor-pointer"
+            >
               Cancel
             </Button>
-            <Button variant="danger" size="md" onClick={handleConfirmReject}>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmReject}
+              className="text-xs cursor-pointer"
+            >
               Confirm Rejection
             </Button>
-          </>
+          </div>
         }
       >
-        <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '1rem' }}>
-          Please state the reason for rejecting claim <strong>{expense.id}</strong>. The employee will receive an automated notification.
-        </p>
-        <textarea
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          placeholder="e.g. Missing detailed itemized invoice breakdown; Please re-submit with merchant VAT number."
-          className="form-textarea"
-          rows={4}
-        />
+        <div className="space-y-3 text-xs">
+          <p className="text-muted-foreground">
+            Please state the reason for rejecting claim <strong className="text-foreground">{expense.id}</strong>. The employee will receive an automated notification.
+          </p>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="e.g. Missing detailed itemized invoice breakdown; Please re-submit with merchant GST tax invoice."
+            className="w-full p-3 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground text-xs focus:outline-none focus:ring-1 focus:ring-ring resize-y"
+            rows={4}
+          />
+        </div>
       </Modal>
     </div>
   );

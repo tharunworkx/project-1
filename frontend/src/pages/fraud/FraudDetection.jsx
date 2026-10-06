@@ -249,10 +249,7 @@ export default function FraudDetection() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Fraud & Duplicate Detection Engine
             </h1>
-            <Badge className="bg-primary/10 text-primary border-primary/20 gap-1 text-[11px] font-semibold">
-              <Sparkles className="size-3" />
-              AI Automated Audit
-            </Badge>
+
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Real-time heuristic & perceptual AI analysis detecting duplicated receipts, split transactions, and spending anomalies.

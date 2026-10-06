@@ -36,6 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/select";
 
 const mockAuditLogs = [
   {
@@ -373,31 +374,33 @@ export default function AuditTrail() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <CustomSelect
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-border bg-background text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">All Actions</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="POLICY_OVERRIDE">Policy Override</option>
-              <option value="REIMBURSED">Reimbursed</option>
-              <option value="CREATED">Created</option>
-              <option value="MODIFIED">Modified</option>
-            </select>
+              className="h-10 min-w-[140px] text-xs font-medium"
+              options={[
+                { value: "ALL", label: "All Actions" },
+                { value: "APPROVED", label: "Approved" },
+                { value: "REJECTED", label: "Rejected" },
+                { value: "POLICY_OVERRIDE", label: "Policy Override" },
+                { value: "REIMBURSED", label: "Reimbursed" },
+                { value: "CREATED", label: "Created" },
+                { value: "MODIFIED", label: "Modified" },
+              ]}
+            />
 
-            <select
+            <CustomSelect
               value={selectedEntityType}
               onChange={(e) => setSelectedEntityType(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-border bg-background text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">All Entity Types</option>
-              <option value="Expense Claim">Expense Claim</option>
-              <option value="Approval Policy">Approval Policy</option>
-              <option value="Batch Payment">Batch Payment</option>
-              <option value="Department Budget">Department Budget</option>
-            </select>
+              className="h-10 min-w-[155px] text-xs font-medium"
+              options={[
+                { value: "ALL", label: "All Entity Types" },
+                { value: "Expense Claim", label: "Expense Claim" },
+                { value: "Approval Policy", label: "Approval Policy" },
+                { value: "Batch Payment", label: "Batch Payment" },
+                { value: "Department Budget", label: "Department Budget" },
+              ]}
+            />
           </div>
         </CardContent>
       </Card>

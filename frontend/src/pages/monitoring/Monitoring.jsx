@@ -36,6 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { CustomSelect } from "@/components/ui/select";
 
 const mockSlowApis = [
   {
@@ -204,16 +205,17 @@ export default function Monitoring() {
             <span>Checked: {lastChecked}</span>
           </div>
 
-          <select
+          <CustomSelect
             value={autoRefreshInterval}
             onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
-            className="h-9 px-2.5 rounded-xl border border-border bg-background text-xs font-medium text-foreground cursor-pointer focus:outline-none"
-          >
-            <option value={5}>Auto: 5s</option>
-            <option value={10}>Auto: 10s</option>
-            <option value={30}>Auto: 30s</option>
-            <option value={0}>Pause</option>
-          </select>
+            triggerClassName="h-9 px-2.5 rounded-xl text-xs font-medium w-[115px]"
+            options={[
+              { value: 5, label: "Auto: 5s" },
+              { value: 10, label: "Auto: 10s" },
+              { value: 30, label: "Auto: 30s" },
+              { value: 0, label: "Pause" },
+            ]}
+          />
 
           <Button
             variant="outline"
