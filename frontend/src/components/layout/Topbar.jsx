@@ -44,6 +44,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ModeToggle from "./ModeToggle";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBellDropdown from "../notifications/NotificationBellDropdown";
+import RoleSwitcher from "../common/RoleSwitcher";
 
 const routeNames = {
   "/": "Dashboard",
@@ -52,8 +54,15 @@ const routeNames = {
   "/expenses/new": "New Expense",
   "/approvals": "Approval Queue",
   "/reimbursements": "Reimbursements",
-  "/budgets": "Budgets",
-  "/reports": "Reports & Analytics",
+  "/finance/reimbursements": "Reimbursements",
+  "/budgets": "Budget Management",
+  "/finance/budgets": "Budget Management",
+  "/reports": "Financial Reports & Analytics",
+  "/finance/reports": "Financial Reports",
+  "/finance": "Finance Overview & Analytics",
+  "/finance/analytics": "Financial Analytics",
+  "/analytics": "Reports & Analytics",
+  "/notifications": "Notification Center",
   "/admin/users": "User Management",
   "/admin/departments": "Departments",
   "/admin/projects": "Projects",
@@ -346,126 +355,14 @@ export default function Topbar() {
             )}
           </div>
 
+          {/* Role Persona Switcher (Person 3 Demo) */}
+          <RoleSwitcher />
+
           {/* Dark / Light Mode Toggle */}
           <ModeToggle />
 
-          {/* Interactive Notifications Popover Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-9 relative flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer rounded-full hover:bg-muted"
-                aria-label="Open notifications"
-              >
-                <Bell className="size-4.5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex size-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-                    <span className="relative inline-flex rounded-full size-2.5 bg-destructive border-2 border-card" />
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent
-              align="end"
-              sideOffset={8}
-              className="w-80 sm:w-96 p-0 rounded-2xl shadow-2xl border border-border bg-popover text-popover-foreground overflow-hidden"
-            >
-              {/* Notifications Header */}
-              <div className="p-3.5 border-b border-border/80 flex items-center justify-between bg-muted/20">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-foreground">Notifications</h3>
-                  {unreadCount > 0 ? (
-                    <Badge variant="default" className="text-[10px] h-5 px-1.5 font-bold">
-                      {unreadCount} New
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground font-normal">
-                      Caught up
-                    </Badge>
-                  )}
-                </div>
-
-                {unreadCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleMarkAllRead}
-                    className="text-xs text-primary hover:underline font-medium cursor-pointer"
-                  >
-                    Mark all as read
-                  </button>
-                )}
-              </div>
-
-              {/* Notification Items List */}
-              <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-muted-foreground">
-                    <Bell className="size-6 text-muted-foreground/50 mx-auto mb-2" />
-                    No notifications at this time.
-                  </div>
-                ) : (
-                  notifications.map((notif) => {
-                    const NotifIcon = notif.icon;
-                    return (
-                      <div
-                        key={notif.id}
-                        onClick={() => handleNotificationClick(notif)}
-                        className={`p-3.5 flex items-start gap-3 hover:bg-muted/60 transition-colors cursor-pointer ${
-                          notif.unread ? "bg-muted/30" : ""
-                        }`}
-                      >
-                        <div
-                          className={`size-8.5 rounded-xl flex items-center justify-center shrink-0 border border-border/40 ${notif.color}`}
-                        >
-                          <NotifIcon className="size-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <span className="text-xs font-semibold text-foreground truncate">
-                              {notif.title}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {notif.time}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            {notif.description}
-                          </p>
-                        </div>
-                        {notif.unread && (
-                          <span className="size-2 rounded-full bg-primary shrink-0 self-center" />
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Notifications Footer */}
-              <div className="p-2.5 border-t border-border/80 flex items-center justify-between bg-muted/20 text-xs">
-                {notifications.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleClearNotifications}
-                    className="text-[11px] text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 cursor-pointer"
-                  >
-                    <Trash2 className="size-3" />
-                    <span>Clear all</span>
-                  </button>
-                )}
-                <Link
-                  to="/audit"
-                  className="text-[11px] text-primary hover:underline font-medium flex items-center gap-1 ml-auto"
-                >
-                  <span>Audit Trail</span>
-                  <ExternalLink className="size-3" />
-                </Link>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Live Notification Center Bell */}
+          <NotificationBellDropdown />
 
           {/* Profile Dropdown */}
           <DropdownMenu>

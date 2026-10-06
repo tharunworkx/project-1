@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   CreditCard,
   DollarSign,
@@ -16,6 +16,13 @@ import {
   ChevronRight,
   Sparkles,
   Wallet,
+  AlertTriangle,
+  XCircle,
+  FileText,
+  Filter,
+  RotateCcw,
+  ArrowUpDown,
+  ShieldAlert,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -35,149 +42,176 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from '@/context/AuthContext';
+import { useFinanceRole } from '@/hooks/useFinanceRole';
+import { useToast } from '@/context/ToastContext';
+import reimbursementMockService from '@/services/mock/reimbursementMockService';
+import { formatCurrency, formatDate } from '@/lib/currency';
+import ReimbursementDetailsModal from '@/components/finance/reimbursements/ReimbursementDetailsModal';
+import ConfirmDialog from '@/components/finance/common/ConfirmDialog';
+import { mockDepartments, mockEmployees } from '@/services/mock/financeMockData';
+import FilterSelect from '@/components/common/FilterSelect';
 
-const initialReimbursements = [
-  {
-    id: 'RMB-2026-042',
-    claimId: 'EXP-2026-079',
-    employee: 'Arun Kumar',
-    email: 'arun.kumar@company.com',
-    avatarFallback: 'AK',
-    department: 'Sales',
-    category: 'Travel & Flight',
-    method: 'Corporate Card',
-    accountLast4: '4821',
-    amount: '₹4,850.00',
-    numericAmount: 4850,
-    status: 'Approved',
-    date: '05 Oct 2026',
-  },
-  {
-    id: 'RMB-2026-041',
-    claimId: 'EXP-2026-076',
-    employee: 'Priya Sharma',
-    email: 'priya.s@company.com',
-    avatarFallback: 'PS',
-    department: 'Marketing',
-    category: 'Food & Dining',
-    method: 'Bank Transfer',
-    accountLast4: '9012',
-    amount: '₹1,240.00',
-    numericAmount: 1240,
-    status: 'Pending',
-    date: '04 Oct 2026',
-  },
-  {
-    id: 'RMB-2026-040',
-    claimId: 'EXP-2026-081',
-    employee: 'Rahul Sundaram',
-    email: 'rahul.s@company.com',
-    avatarFallback: 'RS',
-    department: 'Engineering',
-    category: 'Fuel & Transit',
-    method: 'Corporate Card',
-    accountLast4: '1149',
-    amount: '₹2,100.00',
-    numericAmount: 2100,
-    status: 'Approved',
-    date: '04 Oct 2026',
-  },
-  {
-    id: 'RMB-2026-039',
-    claimId: 'EXP-2026-077',
-    employee: 'Karthik Mohan',
-    email: 'karthik.m@company.com',
-    avatarFallback: 'KM',
-    department: 'Operations',
-    category: 'Office Equipment',
-    method: 'UPI Reimbursement',
-    accountLast4: '7723',
-    amount: '₹3,450.00',
-    numericAmount: 3450,
-    status: 'In Review',
-    date: '03 Oct 2026',
-  },
-  {
-    id: 'RMB-2026-038',
-    claimId: 'EXP-2026-075',
-    employee: 'Divya Ramesh',
-    email: 'divya.r@company.com',
-    avatarFallback: 'DR',
-    department: 'Design',
-    category: 'Accommodation',
-    method: 'Corporate Card',
-    accountLast4: '3321',
-    amount: '₹7,800.00',
-    numericAmount: 7800,
-    status: 'Approved',
-    date: '02 Oct 2026',
-  },
-  {
-    id: 'RMB-2026-037',
-    claimId: 'EXP-2026-071',
-    employee: 'Michael Brown',
-    email: 'michael.b@company.com',
-    avatarFallback: 'MB',
-    department: 'Sales',
-    category: 'Client Entertainment',
-    method: 'Direct Deposit (ACH)',
-    accountLast4: '4821',
-    amount: '₹3,250.00',
-    numericAmount: 3250,
-    status: 'Pending',
-    date: '01 Oct 2026',
-  },
-  {
-    id: 'RMB-2026-036',
-    claimId: 'EXP-2026-068',
-    employee: 'Sarah Jenkins',
-    email: 'sarah.j@company.com',
-    avatarFallback: 'SJ',
-    department: 'Engineering',
-    category: 'Software & Tools',
-    method: 'Bank Transfer',
-    accountLast4: '9941',
-    amount: '₹14,200.00',
-    numericAmount: 14200,
-    status: 'Disbursed',
-    date: '30 Sep 2026',
-  },
+const STATUS_FILTER_OPTIONS = [
+  { value: 'All', label: 'All Statuses' },
+  { value: 'Approved', label: 'Approved' },
+  { value: 'Pending Reimbursement', label: 'Pending Reimbursement' },
+  { value: 'Processing', label: 'Processing' },
+  { value: 'Reimbursed', label: 'Reimbursed' },
+  { value: 'On Hold', label: 'On Hold' },
+  { value: 'Failed', label: 'Failed' },
+];
+
+const AMOUNT_FILTER_OPTIONS = [
+  { value: 'All', label: 'All Amounts' },
+  { value: 'under-2500', label: 'Under ₹2,500' },
+  { value: '2500-10000', label: '₹2,500 – ₹10,000' },
+  { value: '10000-50000', label: '₹10,000 – ₹50,000' },
+  { value: 'over-50000', label: 'Over ₹50,000' },
 ];
 
 function StatusBadge({ status }) {
   const s = (status || '').toLowerCase();
-  if (s === 'approved' || s === 'disbursed') {
+  if (s === 'reimbursed' || s === 'disbursed') {
     return (
-      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-medium capitalize">
-        {status}
+      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-medium">
+        Reimbursed
       </Badge>
     );
   }
-  if (s === 'pending') {
+  if (s === 'processing') {
     return (
-      <Badge className="bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 font-medium capitalize">
-        Pending
+      <Badge className="bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 font-medium">
+        Processing
+      </Badge>
+    );
+  }
+  if (s === 'on hold') {
+    return (
+      <Badge className="bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 font-medium">
+        On Hold
+      </Badge>
+    );
+  }
+  if (s === 'failed') {
+    return (
+      <Badge className="bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 font-medium">
+        Failed
+      </Badge>
+    );
+  }
+  if (s === 'pending reimbursement') {
+    return (
+      <Badge className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-500/10 dark:text-amber-300 font-medium">
+        Pending Reimbursement
       </Badge>
     );
   }
   return (
-    <Badge className="bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 font-medium capitalize">
-      {status || 'In Review'}
+    <Badge className="bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 font-medium">
+      {status || 'Approved'}
     </Badge>
   );
 }
 
 export const Reimbursements = () => {
-  const [list, setList] = useState(initialReimbursements);
-  const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [processing, setProcessing] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
+  const { user } = useAuth();
+  const { isEmployee, canTakeActions, role } = useFinanceRole();
+  const { toastSuccess, toastError, toastWarning, toastInfo } = useToast();
 
-  const readyItems = list.filter((item) => item.status === 'Approved' || item.status === 'Pending');
-  const readyTotal = readyItems.reduce((acc, item) => acc + item.numericAmount, 0);
+  const [list, setList] = useState([]);
+  const [metrics, setMetrics] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [deptFilter, setDeptFilter] = useState('All');
+  const [employeeFilter, setEmployeeFilter] = useState('All');
+  const [amountFilter, setAmountFilter] = useState('All');
+  const [dateFilter, setDateFilter] = useState('All');
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('approvedDate');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  // Selection & Details Modal
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [activeItem, setActiveItem] = useState(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    description: '',
+    type: 'warning',
+    confirmText: 'Confirm',
+    requiresInput: false,
+    inputLabel: '',
+    inputPlaceholder: '',
+    defaultValue: '',
+    onConfirm: () => {},
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const filters = {
+        search,
+        status: statusFilter,
+        department: deptFilter,
+        employee: employeeFilter,
+        amountRange: amountFilter,
+        dateRange: dateFilter,
+        sortBy,
+        sortOrder,
+        onlyEmployee: isEmployee ? user?.name : null,
+      };
+
+      const [items, m] = await Promise.all([
+        reimbursementMockService.getReimbursements(filters),
+        reimbursementMockService.getDashboardMetrics(),
+      ]);
+
+      setList(items);
+      setMetrics(m);
+    } catch (e) {
+      console.error(e);
+      toastError('Failed to load reimbursement claims');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [search, statusFilter, deptFilter, employeeFilter, amountFilter, dateFilter, sortBy, sortOrder, isEmployee, user?.name]);
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setStatusFilter('All');
+    setDeptFilter('All');
+    setEmployeeFilter('All');
+    setAmountFilter('All');
+    setDateFilter('All');
+    setCurrentPage(1);
+    toastInfo('Reimbursement filters reset to defaults');
+  };
+
+  // Pagination calculation
+  const totalPages = Math.ceil(list.length / pageSize) || 1;
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [list, currentPage]);
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
@@ -186,271 +220,710 @@ export const Reimbursements = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filtered.length) {
+    if (selectedIds.length === paginatedList.length && paginatedList.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filtered.map((i) => i.id));
+      setSelectedIds(paginatedList.map((i) => i.id));
     }
   };
 
-  const handleDisburseSelected = () => {
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Status transitions with confirmation dialogs
+  const handleInitiateStatusChange = (id, newStatus) => {
+    const claim = list.find((i) => i.id === id);
+    if (!claim) return;
+
+    if (newStatus === 'Processing') {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Mark Claim as Processing',
+        description: `Are you ready to move claim ${id} (${formatCurrency(claim.amount, claim.currency)}) into the processing queue?`,
+        type: 'info',
+        confirmText: 'Mark Processing',
+        requiresInput: false,
+        onConfirm: async () => {
+          await reimbursementMockService.updateStatus(id, 'Processing', {
+            user: user?.name,
+            role,
+          });
+          toastSuccess(`Claim ${id} moved to processing status`);
+          loadData();
+          if (activeItem?.id === id) {
+            setActiveItem((prev) => ({ ...prev, status: 'Processing' }));
+          }
+        },
+      });
+    } else if (newStatus === 'Reimbursed') {
+      const generatedRef = `TXN-${Math.floor(10000000 + Math.random() * 90000000)}`;
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Confirm Disbursement / Reimbursed',
+        description: `Verify final settlement of ${formatCurrency(claim.amount, claim.currency)} to ${claim.employeeName}. Enter the UTR / Payment Reference ID:`,
+        type: 'success',
+        confirmText: 'Confirm Settlement',
+        requiresInput: true,
+        inputLabel: 'Bank UTR / Transaction Reference ID',
+        inputPlaceholder: 'e.g. TXN-NEFT-992140',
+        defaultValue: generatedRef,
+        onConfirm: async (refId) => {
+          await reimbursementMockService.updateStatus(id, 'Reimbursed', {
+            referenceId: refId || generatedRef,
+            user: user?.name,
+            role,
+          });
+          toastSuccess(`Claim ${id} successfully disbursed and settled`);
+          loadData();
+          if (activeItem?.id === id) {
+            setActiveItem((prev) => ({ ...prev, status: 'Reimbursed', paymentReferenceId: refId }));
+          }
+        },
+      });
+    } else if (newStatus === 'On Hold') {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Put Reimbursement On Hold',
+        description: `Placing claim ${id} on hold pauses disbursement until clarifications are provided. Please enter the hold reason:`,
+        type: 'warning',
+        confirmText: 'Put On Hold',
+        requiresInput: true,
+        inputLabel: 'Reason for Hold',
+        inputPlaceholder: 'e.g. Rate exceeds Tier-1 hotel cap, awaiting VP sign-off',
+        defaultValue: '',
+        onConfirm: async (comment) => {
+          await reimbursementMockService.updateStatus(id, 'On Hold', {
+            comment: comment || 'Placed on hold by finance auditor',
+            user: user?.name,
+            role,
+          });
+          toastWarning(`Claim ${id} placed on hold`);
+          loadData();
+          if (activeItem?.id === id) {
+            setActiveItem((prev) => ({ ...prev, status: 'On Hold' }));
+          }
+        },
+      });
+    } else if (newStatus === 'Failed') {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Mark Payment as Failed',
+        description: `Record a gateway or banking failure for claim ${id}. Please specify the error reason:`,
+        type: 'danger',
+        confirmText: 'Mark Failed',
+        requiresInput: true,
+        inputLabel: 'Failure Reason',
+        inputPlaceholder: 'e.g. Beneficiary IFSC account verification failed',
+        defaultValue: '',
+        onConfirm: async (comment) => {
+          await reimbursementMockService.updateStatus(id, 'Failed', {
+            comment: comment || 'Disbursement dispatch failure recorded',
+            user: user?.name,
+            role,
+          });
+          toastError(`Claim ${id} recorded as failed`);
+          loadData();
+          if (activeItem?.id === id) {
+            setActiveItem((prev) => ({ ...prev, status: 'Failed' }));
+          }
+        },
+      });
+    }
+  };
+
+  const handleBatchAction = (newStatus) => {
     if (selectedIds.length === 0) return;
-    setProcessing(true);
-    setTimeout(() => {
-      setList((prev) =>
-        prev.map((item) =>
-          selectedIds.includes(item.id) ? { ...item, status: 'Disbursed' } : item
-        )
-      );
-      setProcessing(false);
-      setSuccessMsg(`Successfully disbursed ${selectedIds.length} reimbursements via settlement batch`);
-      setSelectedIds([]);
-      setTimeout(() => setSuccessMsg(''), 5000);
-    }, 800);
+    setConfirmDialog({
+      isOpen: true,
+      title: `Batch ${newStatus} (${selectedIds.length} Claims)`,
+      description: `Are you sure you want to update ${selectedIds.length} claims to "${newStatus}"?`,
+      type: newStatus === 'Reimbursed' ? 'success' : 'info',
+      confirmText: `Confirm Batch ${newStatus}`,
+      onConfirm: async () => {
+        await reimbursementMockService.batchUpdateStatus(selectedIds, newStatus, {
+          user: user?.name,
+        });
+        toastSuccess(`Successfully updated ${selectedIds.length} claims to ${newStatus}`);
+        setSelectedIds([]);
+        loadData();
+      },
+    });
   };
 
-  const handleDisburseSingle = (id) => {
-    setList((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'Disbursed' } : item))
-    );
-    setSuccessMsg(`Disbursement completed for claim ${id}`);
-    setTimeout(() => setSuccessMsg(''), 4000);
+  const handleAddComment = async (id, commentText) => {
+    await reimbursementMockService.addFinanceComment(id, commentText, user?.name, role);
+    toastSuccess('Finance audit note added to claim record');
+    const updated = await reimbursementMockService.getReimbursementById(id);
+    setActiveItem(updated);
+    loadData();
   };
 
-  const filtered = list.filter(
-    (item) =>
-      item.employee.toLowerCase().includes(search.toLowerCase()) ||
-      item.email.toLowerCase().includes(search.toLowerCase()) ||
-      item.category.toLowerCase().includes(search.toLowerCase()) ||
-      item.method.toLowerCase().includes(search.toLowerCase()) ||
-      item.claimId.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleViewDetails = (item) => {
+    setActiveItem(item);
+    setDetailsModalOpen(true);
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Toast Notification */}
-      {successMsg && (
-        <div className="flex items-center gap-2 p-3 text-xs font-semibold rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 animate-in fade-in">
-          <CheckCircle2 className="size-4" />
-          <span>{successMsg}</span>
+    <div className="w-full min-w-0 space-y-6 animate-fade-in">
+      {/* Page Title & Context Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <span>Reimbursement Management</span>
+            {isEmployee && (
+              <Badge variant="outline" className="text-xs font-normal">
+                Personal Claims View
+              </Badge>
+            )}
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {isEmployee
+              ? 'Track the real-time settlement status and bank payment trails for your submitted expense claims.'
+              : 'Audit approved claims, dispatch corporate treasury disbursements, and manage payment rails.'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {canTakeActions && selectedIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-8"
+                onClick={() => handleBatchAction('Reimbursed')}
+              >
+                <Send className="size-3.5" />
+                <span>Disburse Batch ({selectedIds.length})</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={() => handleBatchAction('Processing')}
+              >
+                Mark Processing
+              </Button>
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
+            onClick={() => {
+              const csvContent =
+                'data:text/csv;charset=utf-8,Claim ID,Expense ID,Employee,Department,Category,Amount,Status,Ref ID\n' +
+                list
+                  .map(
+                    (i) =>
+                      `"${i.id}","${i.expenseId}","${i.employeeName}","${i.department}","${i.category}","${i.amount}","${i.status}","${i.paymentReferenceId || ''}"`
+                  )
+                  .join('\n');
+              const link = document.createElement('a');
+              link.setAttribute('href', encodeURI(csvContent));
+              link.setAttribute('download', `reimbursements_export_${Date.now()}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              toastSuccess('Exported claims to CSV successfully');
+            }}
+          >
+            <Download className="size-3.5" />
+            <span>Export Table</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Reimbursement Dashboard Metrics Grid */}
+      {metrics && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0">
+          <Card className="shadow-xs border-border/80">
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-4 px-4">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Total Approved
+              </CardDescription>
+              <CheckCircle2 className="size-4 text-primary" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-foreground">
+                {metrics.totalApprovedExpenses}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Total claims cleared for payout
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-xs border-border/80">
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-4 px-4">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Pending Reimbursement
+              </CardDescription>
+              <Clock className="size-4 text-amber-500" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {formatCurrency(metrics.pendingReimbursementAmount)}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {metrics.pendingReimbursementCount} claims awaiting batch release
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-xs border-border/80">
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-4 px-4">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Processing Rail
+              </CardDescription>
+              <Wallet className="size-4 text-blue-500" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {metrics.processingReimbursementCount} Claims
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                In transit via ACH / UPI rails
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-xs border-border/80">
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-4 px-4">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Successfully Settled
+              </CardDescription>
+              <CheckCircle2 className="size-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(metrics.successfullyReimbursedAmount)}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {metrics.successfullyReimbursedCount} claims settled YTD
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Top Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="shadow-xs">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Ready for Payout
-            </CardDescription>
-            <Wallet className="size-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              ₹{readyTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+      {/* Secondary Metrics Bar */}
+      {metrics && (
+        <div className="p-3.5 rounded-xl border border-border/80 bg-muted/30 flex flex-wrap items-center justify-between gap-4 text-xs w-full min-w-0">
+          <div className="flex items-center gap-6">
+            <div>
+              <span className="text-muted-foreground text-[11px] block">This Month Payouts:</span>
+              <span className="font-bold text-foreground">
+                {formatCurrency(metrics.thisMonthReimbursementAmount)}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {readyItems.length} claims cleared for direct settlement
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              In Transit (ACH Rails)
-            </CardDescription>
-            <Clock className="size-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              ₹14,200.00
+            <div className="h-6 w-px bg-border" />
+            <div>
+              <span className="text-muted-foreground text-[11px] block">Total Reimbursement Volume:</span>
+              <span className="font-bold text-foreground">
+                {formatCurrency(metrics.totalReimbursementAmount)}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Estimated settlement: 1–2 business days
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Completed YTD
-            </CardDescription>
-            <CheckCircle2 className="size-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              ₹1,92,840.00
+            <div className="h-6 w-px bg-border" />
+            <div>
+              <span className="text-muted-foreground text-[11px] block">Held / Failed Claims:</span>
+              <span className="font-bold text-rose-600 dark:text-rose-400">
+                {metrics.failedOrHeldCount} Needs Attention
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              100% on-time disbursement compliance
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Datatable matching Image 2 */}
-      <Card className="shadow-xs">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
-          <div>
-            <CardTitle className="text-lg font-semibold text-foreground">
-              Recent Expense Claims
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground mt-0.5">
-              Audit and verify submitted reimbursements across all departments
-            </CardDescription>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-48 sm:w-64">
+          <div className="text-[11px] text-muted-foreground">
+            Total Queue: <strong>{metrics.pendingPaymentCount}</strong> claims pending execution
+          </div>
+        </div>
+      )}
+
+      {/* Datatable & Comprehensive Filter Card */}
+      <Card className="shadow-xs border-border/80 w-full min-w-0 overflow-hidden">
+        <CardHeader className="pb-3 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-base font-bold text-foreground">
+                Reimbursement Settlements
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Search, filter, audit, and disburse corporate expense claims
+              </CardDescription>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Showing {paginatedList.length} of {list.length} claims
+            </span>
+          </div>
+
+          {/* Filter Bar Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 pt-1 text-xs">
+            {/* Search input */}
+            <div className="relative lg:col-span-2">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Filter claims..."
+                placeholder="Search by ID, employee, ref #..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-8 pl-8 text-xs bg-muted/50 border-border/80"
               />
             </div>
-            {selectedIds.length > 0 ? (
+
+            {/* Status filter */}
+            <div>
+              <FilterSelect
+                value={statusFilter}
+                onChange={(val) => {
+                  setStatusFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={STATUS_FILTER_OPTIONS}
+                placeholder="All Statuses"
+              />
+            </div>
+
+            {/* Department filter */}
+            <div>
+              <FilterSelect
+                value={deptFilter}
+                onChange={(val) => {
+                  setDeptFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'All', label: 'All Departments' },
+                  ...mockDepartments.map((d) => ({ value: d, label: d })),
+                ]}
+                placeholder="All Departments"
+              />
+            </div>
+
+            {/* Amount range filter */}
+            <div>
+              <FilterSelect
+                value={amountFilter}
+                onChange={(val) => {
+                  setAmountFilter(val);
+                  setCurrentPage(1);
+                }}
+                options={AMOUNT_FILTER_OPTIONS}
+                placeholder="All Amounts"
+              />
+            </div>
+
+            {/* Reset button */}
+            <div>
               <Button
+                variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-xs"
-                onClick={handleDisburseSelected}
-                disabled={processing}
+                className="h-8 w-full gap-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleResetFilters}
               >
-                <Send className="size-3.5" />
-                <span>Disburse ({selectedIds.length})</span>
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
               </Button>
-            ) : (
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
-                <Download className="size-3.5" />
-                <span>Export</span>
-              </Button>
-            )}
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10 pl-6">
-                  <Checkbox
-                    checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>EMPLOYEE</TableHead>
-                <TableHead>CATEGORY</TableHead>
-                <TableHead>DATE</TableHead>
-                <TableHead>PAYMENT MODE</TableHead>
-                <TableHead>STATUS</TableHead>
-                <TableHead>AMOUNT</TableHead>
-                <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    No reimbursement claims found matching your filter.
-                  </TableCell>
+        <CardContent className="p-0 overflow-hidden">
+          <div className="w-full overflow-x-auto">
+            <Table className="w-full min-w-[850px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  {canTakeActions && (
+                    <TableHead className="w-10 pl-6">
+                      <Checkbox
+                        checked={paginatedList.length > 0 && selectedIds.length === paginatedList.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort('id')}>
+                    <div className="flex items-center gap-1">
+                      <span>EXPENSE ID</span>
+                      <ArrowUpDown className="size-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort('employeeName')}>
+                    <div className="flex items-center gap-1">
+                      <span>EMPLOYEE</span>
+                      <ArrowUpDown className="size-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead>DEPARTMENT</TableHead>
+                  <TableHead>CATEGORY</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort('amount')}>
+                    <div className="flex items-center gap-1">
+                      <span>AMOUNT</span>
+                      <ArrowUpDown className="size-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort('approvedDate')}>
+                    <div className="flex items-center gap-1">
+                      <span>APPROVED</span>
+                      <ArrowUpDown className="size-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort('status')}>
+                    <div className="flex items-center gap-1">
+                      <span>STATUS</span>
+                      <ArrowUpDown className="size-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead>PAYMENT METHOD & REF</TableHead>
+                  <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
                 </TableRow>
-              ) : (
-                filtered.map((row) => {
-                  const isChecked = selectedIds.includes(row.id);
-                  return (
-                    <TableRow key={row.id} className={isChecked ? "bg-muted/40" : ""}>
-                      <TableCell className="pl-6">
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => toggleSelect(row.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="size-8.5 rounded-full border border-border/60">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                              {row.avatarFallback}
-                            </AvatarFallback>
-                          </Avatar>
+              </TableHeader>
+
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-12 text-xs text-muted-foreground">
+                      Loading reimbursement claims...
+                    </TableCell>
+                  </TableRow>
+                ) : paginatedList.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-12 text-xs text-muted-foreground">
+                      No reimbursement claims found matching your filter criteria.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedList.map((row) => {
+                    const isChecked = selectedIds.includes(row.id);
+                    return (
+                      <TableRow key={row.id} className={isChecked ? 'bg-muted/40' : ''}>
+                        {canTakeActions && (
+                          <TableCell className="pl-6">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={() => toggleSelect(row.id)}
+                            />
+                          </TableCell>
+                        )}
+
+                        <TableCell>
                           <div className="flex flex-col text-left">
-                            <span className="text-xs font-semibold text-foreground">{row.employee}</span>
-                            <span className="text-[11px] text-muted-foreground">{row.email}</span>
+                            <span className="font-mono text-xs font-semibold text-foreground">
+                              {row.expenseId}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {row.id}
+                            </span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs font-semibold text-foreground">
-                        {row.category}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {row.date}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {row.method}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={row.status} />
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-foreground">
-                        {row.amount}
-                      </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-7 text-muted-foreground">
-                              <EllipsisVertical className="size-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {row.status !== 'Disbursed' && (
-                              <DropdownMenuItem
-                                className="cursor-pointer text-emerald-600 focus:text-emerald-600 flex items-center gap-2"
-                                onClick={() => handleDisburseSingle(row.id)}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="size-7 rounded-full border border-border/60">
+                              <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                                {row.avatarFallback || 'EM'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col text-left">
+                              <span className="text-xs font-semibold text-foreground leading-tight">
+                                {row.employeeName}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {row.employeeId}
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+                          {row.department}
+                        </TableCell>
+
+                        <TableCell className="text-xs font-medium text-foreground">
+                          {row.category}
+                        </TableCell>
+
+                        <TableCell className="text-xs font-bold text-foreground">
+                          {formatCurrency(row.amount, row.currency)}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex flex-col text-left text-xs">
+                            <span className="text-foreground">{formatDate(row.approvedDate)}</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-28">
+                              By: {row.approvedBy?.split(' ')[0] || 'Manager'}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <StatusBadge status={row.status} />
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex flex-col text-left text-xs">
+                            <span className="text-foreground truncate max-w-32">{row.paymentMethod}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono truncate max-w-32">
+                              {row.paymentReferenceId || 'Pending ref'}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="pr-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-foreground cursor-pointer"
                               >
-                                <Send className="size-4" />
-                                <span>Disburse Payout</span>
+                                <EllipsisVertical className="size-3.5" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 text-xs">
+                              <DropdownMenuItem
+                                onClick={() => handleViewDetails(row)}
+                                className="cursor-pointer flex items-center gap-2"
+                              >
+                                <Eye className="size-3.5 text-primary" />
+                                <span>View Details & Timeline</span>
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                              <Eye className="size-4" />
-                              <span>View Claim Details</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                              <Download className="size-4" />
-                              <span>Download Receipt</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  alert(`Attached Receipt: ${row.receipt?.fileName || 'tax_invoice.pdf'}\nSize: ${row.receipt?.fileSize || '380 KB'}\nStatus: Verified`);
+                                }}
+                                className="cursor-pointer flex items-center gap-2"
+                              >
+                                <FileText className="size-3.5 text-muted-foreground" />
+                                <span>View Receipt</span>
+                              </DropdownMenuItem>
+
+                              {canTakeActions && (
+                                <>
+                                  <DropdownMenuSeparator />
+
+                                  {row.status !== 'Processing' && row.status !== 'Reimbursed' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleInitiateStatusChange(row.id, 'Processing')}
+                                      className="cursor-pointer text-blue-600 focus:text-blue-600 flex items-center gap-2"
+                                    >
+                                      <Clock className="size-3.5" />
+                                      <span>Mark as Processing</span>
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  {row.status !== 'Reimbursed' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleInitiateStatusChange(row.id, 'Reimbursed')}
+                                      className="cursor-pointer text-emerald-600 focus:text-emerald-600 flex items-center gap-2"
+                                    >
+                                      <Send className="size-3.5" />
+                                      <span>Mark as Reimbursed</span>
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  {row.status !== 'On Hold' && row.status !== 'Reimbursed' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleInitiateStatusChange(row.id, 'On Hold')}
+                                      className="cursor-pointer text-amber-600 focus:text-amber-600 flex items-center gap-2"
+                                    >
+                                      <AlertTriangle className="size-3.5" />
+                                      <span>Put On Hold</span>
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  {row.status !== 'Failed' && row.status !== 'Reimbursed' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleInitiateStatusChange(row.id, 'Failed')}
+                                      className="cursor-pointer text-rose-600 focus:text-rose-600 flex items-center gap-2"
+                                    >
+                                      <XCircle className="size-3.5" />
+                                      <span>Mark as Failed</span>
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Datatable Pagination Footer */}
           <div className="flex items-center justify-between px-6 py-3 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">
             <span>
-              Showing 1 to {filtered.length} of {list.length} claims
+              Showing {(currentPage - 1) * pageSize + 1} to{' '}
+              {Math.min(currentPage * pageSize, list.length)} of {list.length} claims
             </span>
-            <div className="flex items-center gap-1.5">
-              <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled>
-                <ChevronLeft className="size-3.5" />
-                <span className="sr-only">Previous page</span>
-              </Button>
-              <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled={filtered.length <= 10}>
-                <ChevronRight className="size-3.5" />
-                <span className="sr-only">Next page</span>
-              </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px]">
+                Page {currentPage} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs cursor-pointer"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                >
+                  <ChevronLeft className="size-3.5" />
+                  <span className="sr-only">Previous page</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs cursor-pointer"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                >
+                  <ChevronRight className="size-3.5" />
+                  <span className="sr-only">Next page</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Details & Timeline Modal */}
+      <ReimbursementDetailsModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        item={activeItem}
+        canTakeActions={canTakeActions}
+        onUpdateStatus={handleInitiateStatusChange}
+        onAddComment={handleAddComment}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        type={confirmDialog.type}
+        confirmText={confirmDialog.confirmText}
+        requiresInput={confirmDialog.requiresInput}
+        inputLabel={confirmDialog.inputLabel}
+        inputPlaceholder={confirmDialog.inputPlaceholder}
+        defaultValue={confirmDialog.defaultValue}
+      />
     </div>
   );
 };

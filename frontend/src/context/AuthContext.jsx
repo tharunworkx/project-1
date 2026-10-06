@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, roleOverride = null) => {
     setLoading(true);
     try {
       // Attempt backend API call first
@@ -52,10 +52,37 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       // Graceful demo fallback if backend server isn't running yet
       console.warn('Backend unavailable, using client session:', err);
+
+      let inferredRole = roleOverride || 'Admin';
+      let inferredName = 'Alex Morgan';
+      let inferredDept = 'Finance & Operations';
+
+      if (email?.includes('karthik')) {
+        inferredRole = roleOverride || 'Finance Executive';
+        inferredName = 'Karthik Mohan';
+        inferredDept = 'Finance & Accounts';
+      } else if (email?.includes('anita')) {
+        inferredRole = roleOverride || 'Finance Manager / CFO';
+        inferredName = 'Anita Desai';
+        inferredDept = 'Executive Finance';
+      } else if (email?.includes('arun')) {
+        inferredRole = roleOverride || 'Employee';
+        inferredName = 'Arun Kumar';
+        inferredDept = 'Engineering';
+      } else if (email?.includes('priya') || email?.includes('wilson')) {
+        inferredRole = roleOverride || 'Manager';
+        inferredName = 'Priya Sharma';
+        inferredDept = 'Marketing';
+      } else if (roleOverride) {
+        inferredRole = roleOverride;
+      }
+
       const demoUser = {
         ...DEFAULT_DEMO_USER,
         email: email || DEFAULT_DEMO_USER.email,
-        name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()) || DEFAULT_DEMO_USER.name,
+        name: inferredName,
+        role: inferredRole,
+        department: inferredDept,
       };
       setUser(demoUser);
       setToken('demo-session-token');

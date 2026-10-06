@@ -28,7 +28,7 @@ export const Login = () => {
     }
     setError('');
     try {
-      await login(email, password);
+      await login(email, password, activeRole);
       navigate('/dashboard');
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Invalid login credentials');
@@ -44,7 +44,6 @@ export const Login = () => {
       setError('Google authentication failed');
     }
   };
-
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-black overflow-hidden select-none">
       {/* Background Animated Glowing Dots Pattern on Pure Black */}
@@ -186,7 +185,6 @@ export const Login = () => {
             {loading ? 'Signing in...' : 'Continue with email'}
           </button>
         </form>
-
         {/* Footer sign up link */}
         <div className="mt-4 text-center">
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
