@@ -10,6 +10,7 @@ import Dashboard from "../pages/dashboard/Dashboard";
 import Expenses from "../pages/expenses/Expenses";
 import CreateExpense from "../pages/expenses/CreateExpense";
 import ExpenseDetails from "../pages/expenses/ExpenseDetails";
+import Receipts from "../pages/receipts/Receipts";
 import ApprovalQueue from "../pages/approvals/ApprovalQueue";
 import Reimbursements from "../pages/reimbursements/Reimbursements";
 import Budgets from "../pages/budgets/Budgets";
@@ -61,6 +62,7 @@ export default function AppRoutes() {
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/expenses/new" element={<CreateExpense />} />
           <Route path="/expenses/:id" element={<ExpenseDetails />} />
+          <Route path="/receipts" element={<Receipts />} />
 
           {/* Workflow & Person 3 Modules */}
           <Route path="/approvals" element={<ApprovalQueue />} />
