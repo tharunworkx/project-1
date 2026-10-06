@@ -124,7 +124,7 @@ export const ExpenseDetails = () => {
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>
                   Merchant & Purpose
                 </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0.1rem 0' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'currentColor', margin: '0.1rem 0' }}>
                   {expense.merchant}
                 </h3>
                 <p style={{ fontSize: '0.875rem', color: '#475569', margin: 0 }}>{expense.title}</p>
@@ -145,7 +145,7 @@ export const ExpenseDetails = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
                   <img src={expense.claimant.avatar} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>{expense.claimant.name}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor' }}>{expense.claimant.name}</div>
                     <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{expense.claimant.role}</div>
                   </div>
                 </div>
@@ -153,21 +153,21 @@ export const ExpenseDetails = () => {
 
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Department</span>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor', marginTop: '0.2rem' }}>
                   {expense.department}
                 </div>
               </div>
 
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Category</span>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor', marginTop: '0.2rem' }}>
                   {expense.category}
                 </div>
               </div>
 
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Expense Date</span>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor', marginTop: '0.2rem' }}>
                   {expense.date}
                 </div>
               </div>
@@ -206,7 +206,7 @@ export const ExpenseDetails = () => {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>{item.step}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor' }}>{item.step}</span>
                       <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.time}</span>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Assigned / Handled by: {item.user}</span>

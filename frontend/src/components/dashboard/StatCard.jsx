@@ -1,85 +1,30 @@
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
 export default function StatCard({
-  title,
-  value,
-  subtitle,
   icon: Icon,
-  variant = "default"
+  value,
+  title,
+  changePercentage,
+  isPositive = true,
+  className
 }) {
-
-  const styles = {
-    default: {
-      card: "bg-white border-[#e7e3da]",
-      icon: "bg-[#edf4ed] text-[#397267]",
-      subtitle: "text-[#43816f]"
-    },
-
-    orange: {
-      card: "bg-[#fcf2ec] border-[#f2e0d6]",
-      icon: "bg-[#f9dfd1] text-[#d8663e]",
-      subtitle: "text-[#d8663e]"
-    },
-
-    blue: {
-      card: "bg-[#f0f5f5] border-[#dce8e6]",
-      icon: "bg-[#dceae7] text-[#32766e]",
-      subtitle: "text-[#43816f]"
-    }
-  };
-
-  const current = styles[variant] || styles.default;
-
   return (
-    <div className={`
-      rounded-2xl
-      border
-      p-5
-      ${current.card}
-    `}>
-
-      <div className="flex items-start justify-between">
-
-        <div>
-
-          <p className="text-[12px] font-medium text-[#66767c]">
-            {title}
-          </p>
-
-          <h2 className="
-            mt-2
-            text-[27px]
-            font-semibold
-            tracking-[-0.03em]
-            text-[#172b35]
-          ">
-            {value}
-          </h2>
-
-          <p className={`
-            mt-2
-            text-[11px]
-            ${current.subtitle}
-          `}>
-            {subtitle}
-          </p>
-
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center gap-2.5 pb-2">
+        <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-sm">
+          <Icon className="size-4.5" />
         </div>
-
-        <div className={`
-          flex
-          h-10
-          w-10
-          items-center
-          justify-center
-          rounded-full
-          ${current.icon}
-        `}>
-
-          <Icon size={19} strokeWidth={1.7} />
-
-        </div>
-
-      </div>
-
-    </div>
+        <span className="text-2xl font-bold tracking-tight text-foreground">{value}</span>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1.5 pt-0">
+        <span className="text-sm font-semibold text-foreground">{title}</span>
+        <p className="flex items-center gap-1.5 text-xs">
+          <span className={isPositive ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-destructive font-medium"}>
+            {changePercentage}
+          </span>
+          <span className="text-muted-foreground">than last month</span>
+        </p>
+      </CardContent>
+    </Card>
   );
 }

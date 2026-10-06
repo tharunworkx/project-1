@@ -1,143 +1,124 @@
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer
-} from "recharts";
+  EllipsisVertical,
+  ChevronUp,
+  Plane,
+  Utensils,
+  Hotel,
+  Fuel,
+  Building,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 
-const data = [
-  { name: "Travel", value: 32 },
-  { name: "Food", value: 21 },
-  { name: "Accommodation", value: 18 },
-  { name: "Fuel", value: 12 },
-  { name: "Office", value: 10 },
-  { name: "Other", value: 7 }
-];
-
-const colors = [
-  "#286f68",
-  "#ed8b52",
-  "#579cc0",
-  "#e17c86",
-  "#8d6bb3",
-  "#c7a85a"
+const spendingData = [
+  {
+    icon: Plane,
+    category: "Travel & Commute",
+    subtitle: "Flights & Train booking",
+    spent: "₹2,72,500",
+    progress: 75,
+  },
+  {
+    icon: Utensils,
+    category: "Food & Meals",
+    subtitle: "Client dinners & Lunches",
+    spent: "₹1,45,200",
+    progress: 55,
+  },
+  {
+    icon: Hotel,
+    category: "Accommodation",
+    subtitle: "Hotels & Stays",
+    spent: "₹1,82,000",
+    progress: 68,
+  },
+  {
+    icon: Fuel,
+    category: "Fuel & Transit",
+    subtitle: "Local travel allowance",
+    spent: "₹94,500",
+    progress: 42,
+  },
+  {
+    icon: Building,
+    category: "Office Supplies",
+    subtitle: "Hardware & Consumables",
+    spent: "₹72,400",
+    progress: 30,
+  },
 ];
 
 export default function ExpenseBreakdown() {
-
   return (
-    <div className="
-      rounded-2xl
-      border
-      border-[#e7e3da]
-      bg-white
-      p-5
-    ">
-
-      <div className="flex items-center justify-between">
-
-        <h2 className="text-[15px] font-semibold text-[#172b35]">
-          Expense Breakdown
-        </h2>
-
-        <button className="text-[11px] text-[#28786f]">
-          View all →
-        </button>
-
-      </div>
-
-      <div className="relative mt-4 h-[185px]">
-
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-        >
-
-          <PieChart>
-
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={52}
-              outerRadius={75}
-              paddingAngle={2}
-              strokeWidth={0}
-            >
-
-              {data.map((entry, index) => (
-                <Cell
-                  key={entry.name}
-                  fill={colors[index]}
-                />
-              ))}
-
-            </Pie>
-
-          </PieChart>
-
-        </ResponsiveContainer>
-
-        <div className="
-          pointer-events-none
-          absolute
-          inset-0
-          flex
-          items-center
-          justify-center
-          text-center
-        ">
-
-          <div>
-
-            <p className="text-[20px] font-semibold text-[#172b35]">
-              ₹8.42L
-            </p>
-
-            <p className="text-[9px] text-[#7a858a]">
-              Total Expenses
-            </p>
-
-          </div>
-
+    <Card className="shadow-xs flex flex-col justify-between">
+      <CardContent className="flex flex-col gap-4 p-5 pb-3">
+        {/* Card Header with Ellipsis Menu */}
+        <div className="flex items-center justify-between">
+          <span className="text-base font-semibold text-foreground">Top Spending Categories</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground size-7 rounded-full">
+                <EllipsisVertical className="size-4" />
+                <span className="sr-only">Menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                <DropdownMenuItem className="cursor-pointer">Refresh Data</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">Export Summary</DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">Set Budgets</DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-      </div>
-
-      <div className="space-y-2">
-
-        {data.map((item, index) => (
-
-          <div
-            key={item.name}
-            className="flex items-center justify-between"
-          >
-
-            <div className="flex items-center gap-2">
-
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{
-                  backgroundColor: colors[index]
-                }}
-              />
-
-              <span className="text-[10px] text-[#69787d]">
-                {item.name}
-              </span>
-
-            </div>
-
-            <span className="text-[10px] font-medium text-[#43545a]">
-              {item.value}%
+        {/* Big Total & Comparison */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold tracking-tight text-foreground">₹8,42,450</span>
+            <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <ChevronUp className="size-3.5" />
+              <span>12.8%</span>
             </span>
-
           </div>
+          <span className="text-muted-foreground text-xs">Total department expenses this quarter</span>
+        </div>
+      </CardContent>
 
-        ))}
-
-      </div>
-
-    </div>
+      {/* Categories List with Progress Bars */}
+      <CardContent className="flex flex-col gap-3.5 p-5 pt-0">
+        {spendingData.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.category} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="size-9 rounded-sm">
+                  <AvatarFallback className="bg-primary/10 text-primary rounded-sm">
+                    <Icon className="size-4.5" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-semibold text-foreground">{item.category}</span>
+                  <span className="text-[11px] text-muted-foreground">{item.subtitle}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1.5 min-w-28">
+                <span className="text-xs font-semibold text-foreground">{item.spent}</span>
+                <Progress value={item.progress} className="w-28 h-1.5" />
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

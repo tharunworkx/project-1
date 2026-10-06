@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
-import { Save, User, Bell, Shield, Globe, CheckCircle2 } from 'lucide-react';
-import Button from '../../components/common/Button';
+import {
+  Save,
+  User,
+  Bell,
+  Globe,
+  CheckCircle2,
+  Mail,
+  Building2,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '../../context/AuthContext';
 
 export const Settings = () => {
@@ -10,11 +24,18 @@ export const Settings = () => {
     name: user?.name || 'Alex Morgan',
     email: user?.email || 'alex.morgan@company.com',
     department: user?.department || 'Finance & Operations',
-    currency: 'USD ($)',
+    currency: 'INR (₹)',
     notifyApproval: true,
     notifyThreshold: true,
     weeklyReport: false,
   });
+
+  const userInitials = (formData.name || 'AM')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -28,140 +49,250 @@ export const Settings = () => {
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
-      <div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-          System & Account Settings
-        </h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-          Manage your personal workspace preferences and security configurations.
-        </p>
+    <div className="max-w-4xl mx-auto space-y-6 pb-12 animate-in fade-in duration-200">
+      {/* Page Title Header */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            System & Account Settings
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Manage your personal workspace preferences and security configurations.
+          </p>
+        </div>
+
+        <Button
+          onClick={handleSubmit}
+          className="gap-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-4 py-2"
+        >
+          <Save className="size-3.5" />
+          <span>Save Changes</span>
+        </Button>
       </div>
 
+      {/* Success Banner */}
       {success && (
-        <div
-          style={{
-            backgroundColor: '#ecfdf5',
-            color: '#059669',
-            border: '1px solid #a7f3d0',
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-          }}
-        >
-          <CheckCircle2 size={18} />
-          {success}
+        <div className="flex items-center gap-2 p-3 text-xs font-semibold rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 animate-in fade-in">
+          <CheckCircle2 className="size-4" />
+          <span>{success}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Profile Card */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <User size={18} color="var(--primary-600)" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>User Profile</h3>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* 1. User Profile Card */}
+        <Card className="rounded-2xl border border-border/80 shadow-xs">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <User className="size-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  User Profile
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Update your personal details, profile picture, and corporate department
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Full Name</label>
-              <input
+          <CardContent className="space-y-5">
+            {/* Avatar Row */}
+            <div className="flex items-center gap-4 pb-4 border-b border-border/60">
+              <Avatar className="size-14 rounded-full border border-border/80 shadow-xs">
+                <AvatarImage src={user?.avatar} alt={formData.name} />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-foreground">Profile Photo</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Supported formats: JPG, PNG, WEBP (Max 2MB)
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Fields Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  Full Name
+                </label>
+                <Input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g. Alex Morgan"
+                  className="h-9 text-xs rounded-xl bg-muted/30 focus-visible:bg-background"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  Work Email
+                </label>
+                <Input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="alex.morgan@company.com"
+                  className="h-9 text-xs rounded-xl bg-muted/30 focus-visible:bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                Department
+              </label>
+              <Input
                 type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="form-input"
+                required
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                placeholder="Finance & Operations"
+                className="h-9 text-xs rounded-xl bg-muted/30 focus-visible:bg-background"
               />
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Work Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="form-input"
-              />
+        {/* 2. Localization & Currency Card */}
+        <Card className="rounded-2xl border border-border/80 shadow-xs">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Globe className="size-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  Localization & Currency
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Select your primary currency format and financial computation standards
+                </CardDescription>
+              </div>
             </div>
-          </div>
+          </CardHeader>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">Department</label>
-            <input
-              type="text"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="form-input"
-            />
-          </div>
-        </div>
+          <CardContent>
+            <div className="space-y-1.5 max-w-md">
+              <label className="text-xs font-semibold text-foreground">
+                Preferred Reporting Currency
+              </label>
+              <select
+                value={formData.currency}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                className="w-full h-9 rounded-xl border border-input bg-muted/30 px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-background"
+              >
+                <option value="INR (₹)">INR - Indian Rupee (₹)</option>
+                <option value="USD ($)">USD - US Dollar ($)</option>
+                <option value="EUR (€)">EUR - Euro (€)</option>
+                <option value="GBP (£)">GBP - British Pound (£)</option>
+                <option value="CAD ($)">CAD - Canadian Dollar ($)</option>
+                <option value="JPY (¥)">JPY - Japanese Yen (¥)</option>
+              </select>
+              <p className="text-[11px] text-muted-foreground pt-1">
+                All ledger conversions and claim valuations will reference this standard.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Currency & Localization */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Globe size={18} color="var(--primary-600)" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Localization & Currency</h3>
-          </div>
+        {/* 3. Notification Alerts Card */}
+        <Card className="rounded-2xl border border-border/80 shadow-xs">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Bell className="size-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold text-foreground">
+                  Notification Alerts
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Configure automated email dispatch and system-level spending thresholds
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">Preferred Reporting Currency</label>
-            <select
-              value={formData.currency}
-              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              className="form-select"
+          <CardContent className="space-y-4">
+            {/* Checkbox Row 1 */}
+            <div
+              className="flex items-start gap-3 p-3 rounded-xl border border-border/60 hover:bg-muted/30 transition-colors cursor-pointer"
+              onClick={() => setFormData({ ...formData, notifyApproval: !formData.notifyApproval })}
             >
-              <option value="USD ($)">USD - US Dollar ($)</option>
-              <option value="EUR (€)">EUR - Euro (€)</option>
-              <option value="GBP (£)">GBP - British Pound (£)</option>
-              <option value="CAD ($)">CAD - Canadian Dollar ($)</option>
-              <option value="JPY (¥)">JPY - Japanese Yen (¥)</option>
-            </select>
-          </div>
-        </div>
+              <Checkbox
+                checked={formData.notifyApproval}
+                onCheckedChange={(checked) => setFormData({ ...formData, notifyApproval: checked })}
+                className="mt-0.5"
+              />
+              <div className="flex-1 space-y-0.5">
+                <div className="text-xs font-semibold text-foreground">
+                  Expense Approval Direct Dispatch
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Email me immediately whenever an expense claim requires my manual sign-off
+                </div>
+              </div>
+            </div>
 
-        {/* Notifications */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Bell size={18} color="var(--primary-600)" />
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Notification Alerts</h3>
-          </div>
+            {/* Checkbox Row 2 */}
+            <div
+              className="flex items-start gap-3 p-3 rounded-xl border border-border/60 hover:bg-muted/30 transition-colors cursor-pointer"
+              onClick={() => setFormData({ ...formData, notifyThreshold: !formData.notifyThreshold })}
+            >
+              <Checkbox
+                checked={formData.notifyThreshold}
+                onCheckedChange={(checked) => setFormData({ ...formData, notifyThreshold: checked })}
+                className="mt-0.5"
+              />
+              <div className="flex-1 space-y-0.5">
+                <div className="text-xs font-semibold text-foreground">
+                  Budget Capacity Threshold Alert
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Alert me when departmental budget reaches &gt; 85% capacity threshold
+                </div>
+              </div>
+            </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-            <input
-              type="checkbox"
-              checked={formData.notifyApproval}
-              onChange={(e) => setFormData({ ...formData, notifyApproval: e.target.checked })}
-            />
-            <span>Email me immediately when an expense claim requires my sign-off</span>
-          </label>
+            {/* Checkbox Row 3 */}
+            <div
+              className="flex items-start gap-3 p-3 rounded-xl border border-border/60 hover:bg-muted/30 transition-colors cursor-pointer"
+              onClick={() => setFormData({ ...formData, weeklyReport: !formData.weeklyReport })}
+            >
+              <Checkbox
+                checked={formData.weeklyReport}
+                onCheckedChange={(checked) => setFormData({ ...formData, weeklyReport: checked })}
+                className="mt-0.5"
+              />
+              <div className="flex-1 space-y-0.5">
+                <div className="text-xs font-semibold text-foreground">
+                  Automated Weekly Digest
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Deliver automated weekly executive expenditure summary report directly to inbox
+                </div>
+              </div>
+            </div>
+          </CardContent>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-            <input
-              type="checkbox"
-              checked={formData.notifyThreshold}
-              onChange={(e) => setFormData({ ...formData, notifyThreshold: e.target.checked })}
-            />
-            <span>Alert when departmental budget reaches &gt; 85% capacity threshold</span>
-          </label>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-            <input
-              type="checkbox"
-              checked={formData.weeklyReport}
-              onChange={(e) => setFormData({ ...formData, weeklyReport: e.target.checked })}
-            />
-            <span>Deliver automated weekly executive expenditure summary report</span>
-          </label>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="submit" variant="primary" size="lg" icon={Save}>
-            Save Preferences
-          </Button>
-        </div>
+          <CardFooter className="flex justify-end pt-2 pb-5 px-6 border-t border-border/60">
+            <Button
+              type="submit"
+              className="gap-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-5 py-2"
+            >
+              <Save className="size-3.5" />
+              <span>Save Preferences</span>
+            </Button>
+          </CardFooter>
+        </Card>
       </form>
     </div>
   );

@@ -290,7 +290,7 @@ export const CreateExpense = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <FileText size={22} color="var(--primary-600)" />
                 <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>{receiptFile.name}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'currentColor' }}>{receiptFile.name}</div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{(receiptFile.size / 1024).toFixed(1)} KB</div>
                 </div>
               </div>

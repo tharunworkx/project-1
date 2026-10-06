@@ -72,29 +72,35 @@ export const Reports = () => {
       )}
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Average Claim Size</span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0.25rem 0' }}>
-            $328.40
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-card text-card-foreground rounded-2xl border border-border/80 shadow-xs p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Average Claim Size</span>
+          <div className="text-2xl md:text-3xl font-extrabold text-foreground mt-1 tracking-tight">
+            ₹24,850.00
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#059669' }}>-4.2% reduction in unitemized costs</span>
+          <span className="text-xs text-emerald-600 dark:text-emerald-400 mt-1.5 block font-medium">
+            -4.2% reduction in unitemized costs
+          </span>
         </div>
 
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Tax Deductible Spend</span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary-600)', margin: '0.25rem 0' }}>
-            $142,390.00
+        <div className="bg-white dark:bg-card text-card-foreground rounded-2xl border border-border/80 shadow-xs p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Tax Deductible Spend</span>
+          <div className="text-2xl md:text-3xl font-extrabold text-primary mt-1 tracking-tight">
+            ₹14,23,900.00
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Estimated tax write-off: ~$31,300</span>
+          <span className="text-xs text-muted-foreground mt-1.5 block">
+            Estimated tax write-off: ~₹3,12,000
+          </span>
         </div>
 
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Compliance Accuracy</span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669', margin: '0.25rem 0' }}>
+        <div className="bg-white dark:bg-card text-card-foreground rounded-2xl border border-border/80 shadow-xs p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Compliance Accuracy</span>
+          <div className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 tracking-tight">
             98.6%
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Receipts verified via OCR</span>
+          <span className="text-xs text-muted-foreground mt-1.5 block">
+            Receipts verified via OCR
+          </span>
         </div>
       </div>
 

@@ -1,100 +1,88 @@
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { ArrowUpRight, ShieldAlert } from "lucide-react";
+import { Link } from "react-router-dom";
+
 const budgets = [
   {
-    name: "Travel",
-    amount: "₹1,50,000",
-    used: "₹1,12,500",
+    name: "Engineering & Cloud",
+    amount: "₹3,50,000",
+    used: "₹2,62,500",
     percentage: 75,
-    color: "bg-[#28786f]"
   },
   {
-    name: "Food",
-    amount: "₹70,000",
-    used: "₹45,500",
-    percentage: 65,
-    color: "bg-[#ed8b52]"
+    name: "Sales & Client Dinners",
+    amount: "₹1,80,000",
+    used: "₹1,56,600",
+    percentage: 87,
   },
   {
-    name: "Accommodation",
+    name: "Marketing & Conferences",
+    amount: "₹2,20,000",
+    used: "₹1,21,000",
+    percentage: 55,
+  },
+  {
+    name: "Operations & Facilities",
     amount: "₹1,00,000",
-    used: "₹82,000",
-    percentage: 82,
-    color: "bg-[#579cc0]"
+    used: "₹42,000",
+    percentage: 42,
   },
-  {
-    name: "Office Supplies",
-    amount: "₹50,000",
-    used: "₹21,500",
-    percentage: 43,
-    color: "bg-[#8d6bb3]"
-  }
 ];
 
 export default function BudgetProgress() {
-
   return (
-    <div className="
-      rounded-2xl
-      border
-      border-[#e7e3da]
-      bg-white
-      p-5
-    ">
+    <Card className="shadow-xs">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <div>
+          <CardTitle className="text-base font-semibold text-foreground">Department Budgets</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground mt-0.5">
+            Quarterly department threshold monitoring
+          </CardDescription>
+        </div>
+        <Button asChild variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <Link to="/budgets">
+            Manage
+            <ArrowUpRight className="size-3.5" />
+          </Link>
+        </Button>
+      </CardHeader>
 
-      <div className="mb-5 flex items-center justify-between">
-
-        <h2 className="text-[15px] font-semibold text-[#172b35]">
-          Budgets
-        </h2>
-
-        <button className="text-[11px] text-[#28786f]">
-          View all →
-        </button>
-
-      </div>
-
-      <div className="space-y-5">
-
-        {budgets.map((budget) => (
-
-          <div key={budget.name}>
-
-            <div className="mb-2 flex items-center justify-between">
-
-              <div>
-
-                <p className="text-[11px] font-medium text-[#34484e]">
-                  {budget.name}
-                </p>
-
-                <p className="mt-0.5 text-[9px] text-[#8a9599]">
-                  {budget.used} of {budget.amount}
-                </p>
-
+      <CardContent className="space-y-4 pt-1">
+        {budgets.map((budget) => {
+          const isHigh = budget.percentage >= 80;
+          return (
+            <div key={budget.name} className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-semibold text-foreground">{budget.name}</span>
+                  <span className="ml-2 text-muted-foreground text-[11px]">
+                    {budget.used} / {budget.amount}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {isHigh && <ShieldAlert className="size-3.5 text-destructive" />}
+                  <span className={`font-bold ${isHigh ? "text-destructive" : "text-foreground"}`}>
+                    {budget.percentage}%
+                  </span>
+                </div>
               </div>
-
-              <span className="text-[10px] font-semibold text-[#53646a]">
-                {budget.percentage}%
-              </span>
-
-            </div>
-
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#eeeae3]">
-
-              <div
-                className={`h-full rounded-full ${budget.color}`}
-                style={{
-                  width: `${budget.percentage}%`
-                }}
+              <Progress
+                value={budget.percentage}
+                className="h-2"
+                indicatorClassName={isHigh ? "bg-destructive" : "bg-primary"}
               />
-
             </div>
-
-          </div>
-
-        ))}
-
-      </div>
-
-    </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

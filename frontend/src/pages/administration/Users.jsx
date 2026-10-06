@@ -1,61 +1,164 @@
 import React, { useState } from 'react';
-import { Plus, Search, UserCheck, Shield, Mail, Edit2, Trash2 } from 'lucide-react';
-import Button from '../../components/common/Button';
-import Badge from '../../components/common/Badge';
+import {
+  Plus,
+  Search,
+  UserCheck,
+  Shield,
+  Mail,
+  Edit2,
+  Trash2,
+  Download,
+  EllipsisVertical,
+  KeyRound,
+  UserX,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Modal from '../../components/common/Modal';
 
-const mockUsers = [
+const initialUsers = [
   {
     id: 'usr_001',
-    name: 'Alex Morgan',
-    email: 'alex.morgan@company.com',
+    name: 'Arun Kumar',
+    email: 'arun.kumar@company.com',
+    avatarFallback: 'AK',
     role: 'Admin',
-    department: 'Finance & Operations',
+    department: 'Executive Office',
     status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120',
+    lastActive: 'Just now',
   },
   {
     id: 'usr_002',
-    name: 'David Kim',
-    email: 'david.kim@company.com',
-    role: 'Employee',
-    department: 'Engineering',
+    name: 'Priya Sharma',
+    email: 'priya.s@company.com',
+    avatarFallback: 'PS',
+    role: 'Manager',
+    department: 'Marketing',
     status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120',
+    lastActive: '12 mins ago',
   },
   {
     id: 'usr_003',
-    name: 'Sarah Jenkins',
-    email: 'sarah.jenkins@company.com',
-    role: 'Manager',
+    name: 'Rahul Sundaram',
+    email: 'rahul.s@company.com',
+    avatarFallback: 'RS',
+    role: 'Employee',
     department: 'Engineering',
     status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120',
+    lastActive: '1 hour ago',
   },
   {
     id: 'usr_004',
-    name: 'Michael Brown',
-    email: 'michael.brown@company.com',
-    role: 'Employee',
-    department: 'Sales',
+    name: 'Karthik Mohan',
+    email: 'karthik.m@company.com',
+    avatarFallback: 'KM',
+    role: 'Finance Admin',
+    department: 'Finance & Accounts',
     status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120',
+    lastActive: 'Yesterday',
   },
   {
     id: 'usr_005',
-    name: 'Emily Stone',
-    email: 'emily.stone@company.com',
-    role: 'Finance Admin',
-    department: 'Finance',
+    name: 'Divya Ramesh',
+    email: 'divya.r@company.com',
+    avatarFallback: 'DR',
+    role: 'Manager',
+    department: 'Product & Design',
     status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120',
+    lastActive: '2 days ago',
+  },
+  {
+    id: 'usr_006',
+    name: 'Alex Morgan',
+    email: 'alex.m@company.com',
+    avatarFallback: 'AM',
+    role: 'Employee',
+    department: 'Operations',
+    status: 'Active',
+    lastActive: '03 Oct 2026',
+  },
+  {
+    id: 'usr_007',
+    name: 'Sarah Jenkins',
+    email: 'sarah.j@company.com',
+    avatarFallback: 'SJ',
+    role: 'Employee',
+    department: 'Engineering',
+    status: 'Inactive',
+    lastActive: '18 Sep 2026',
   },
 ];
 
+function RoleBadge({ role }) {
+  const r = (role || '').toLowerCase();
+  if (r === 'admin') {
+    return (
+      <Badge className="bg-purple-50 text-purple-700 border-purple-200/80 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20 font-medium">
+        Admin
+      </Badge>
+    );
+  }
+  if (r === 'manager') {
+    return (
+      <Badge className="bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 font-medium">
+        Manager
+      </Badge>
+    );
+  }
+  if (r === 'finance admin') {
+    return (
+      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-medium">
+        Finance Admin
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="font-medium text-muted-foreground border-border/80">
+      {role || 'Employee'}
+    </Badge>
+  );
+}
+
+function StatusBadge({ status }) {
+  if (status === 'Active') {
+    return (
+      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-medium">
+        Active
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="font-medium text-muted-foreground">
+      Inactive
+    </Badge>
+  );
+}
+
 export const Users = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [notification, setNotification] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -66,141 +169,229 @@ export const Users = () => {
   const filtered = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.department.toLowerCase().includes(search.toLowerCase())
+    u.department.toLowerCase().includes(search.toLowerCase()) ||
+    u.role.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleAddUser = (e) => {
     e.preventDefault();
+    const initials = formData.name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U';
+
     const newUser = {
       id: `usr_${Date.now()}`,
       name: formData.name,
       email: formData.email,
+      avatarFallback: initials,
       role: formData.role,
       department: formData.department,
       status: 'Active',
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formData.name)}`,
+      lastActive: 'Just now',
     };
-    setUsers([...users, newUser]);
+    setUsers([newUser, ...users]);
     setModalOpen(false);
     setFormData({ name: '', email: '', role: 'Employee', department: 'Engineering' });
+    setNotification(`Invitation successfully sent to ${formData.email}`);
+    setTimeout(() => setNotification(''), 4000);
   };
 
-  const getRoleVariant = (role) => {
-    switch (role.toLowerCase()) {
-      case 'admin': return 'purple';
-      case 'manager': return 'info';
-      case 'finance admin': return 'success';
-      default: return 'neutral';
-    }
+  const handleDeactivate = (id) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' } : u
+      )
+    );
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-            User Management
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-            Manage staff credentials, assigned roles, and departmental permissions.
-          </p>
+    <div className="space-y-6">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="flex items-center gap-2 p-3 text-xs font-semibold rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 animate-in fade-in">
+          <CheckCircle2 className="size-4" />
+          <span>{notification}</span>
         </div>
+      )}
 
-        <Button variant="primary" size="md" icon={Plus} onClick={() => setModalOpen(true)}>
-          Invite New User
-        </Button>
-      </div>
+      {/* Datatable Card matching Image 2 */}
+      <Card className="shadow-xs">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
+          <div>
+            <CardTitle className="text-lg font-semibold text-foreground">
+              User Management
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Manage staff credentials, assigned roles, and departmental permissions
+            </CardDescription>
+          </div>
 
-      <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', maxWidth: '320px', backgroundColor: '#f8fafc', padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <Search size={16} color="#94a3b8" />
-          <input
-            type="text"
-            placeholder="Search users by name, email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '0.8125rem' }}
-          />
-        </div>
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-48 sm:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Filter users..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
+              />
+            </div>
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs"
+              onClick={() => setModalOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              <span>Invite Member</span>
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
+              <Download className="size-3.5" />
+              <span>Export</span>
+            </Button>
+          </div>
+        </CardHeader>
 
-        <div className="table-container" style={{ border: 'none' }}>
-          <table>
-            <thead>
-              <tr>
-                <th>User / Name</th>
-                <th>Work Email</th>
-                <th>Role</th>
-                <th>Department</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <img src={u.avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
-                      <span style={{ fontWeight: 700, color: '#0f172a' }}>{u.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ color: '#475569' }}>{u.email}</td>
-                  <td>
-                    <Badge variant={getRoleVariant(u.role)}>
-                      {u.role}
-                    </Badge>
-                  </td>
-                  <td style={{ color: '#334155' }}>{u.department}</td>
-                  <td>
-                    <Badge variant="success" dot>
-                      {u.status}
-                    </Badge>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '0.25rem' }}>
-                      <Button variant="ghost" size="sm" icon={Edit2} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-6">EMPLOYEE</TableHead>
+                <TableHead>ROLE</TableHead>
+                <TableHead>DEPARTMENT</TableHead>
+                <TableHead>STATUS</TableHead>
+                <TableHead>LAST ACTIVE</TableHead>
+                <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    No users found matching your search criteria.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="pl-6">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="size-8.5 rounded-full border border-border/60">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                            {user.avatarFallback}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col text-left">
+                          <span className="text-xs font-semibold text-foreground">{user.name}</span>
+                          <span className="text-[11px] text-muted-foreground">{user.email}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <RoleBadge role={user.role} />
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {user.department}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={user.status} />
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {user.lastActive}
+                    </TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="size-7 text-muted-foreground">
+                            <EllipsisVertical className="size-4" />
+                            <span className="sr-only">Actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+                            <Edit2 className="size-4" />
+                            <span>Edit Role & Access</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+                            <KeyRound className="size-4" />
+                            <span>Reset Credentials</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2"
+                            onClick={() => handleDeactivate(user.id)}
+                          >
+                            <UserX className="size-4" />
+                            <span>{user.status === 'Active' ? 'Deactivate User' : 'Reactivate User'}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Invite Team Member">
-        <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">Full Name *</label>
-            <input
+          {/* Datatable Pagination Footer */}
+          <div className="flex items-center justify-between px-6 py-3 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">
+            <span>
+              Showing 1 to {filtered.length} of {users.length} users
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled>
+                <ChevronLeft className="size-3.5" />
+                <span className="sr-only">Previous page</span>
+              </Button>
+              <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled={filtered.length <= 10}>
+                <ChevronRight className="size-3.5" />
+                <span className="sr-only">Next page</span>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Invite Member Modal */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Invite Team Member"
+      >
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Full Name *</label>
+            <Input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="form-input"
               placeholder="e.g. Rachel Adams"
+              className="text-xs"
             />
           </div>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">Work Email *</label>
-            <input
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground">Work Email *</label>
+            <Input
               type="email"
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="form-input"
               placeholder="rachel@company.com"
+              className="text-xs"
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Role</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Role</label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="form-select"
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="Employee">Employee</option>
                 <option value="Manager">Manager</option>
@@ -209,28 +400,33 @@ export const Users = () => {
               </select>
             </div>
 
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Department</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Department</label>
               <select
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="form-select"
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="Engineering">Engineering</option>
                 <option value="Marketing">Marketing</option>
                 <option value="Sales">Sales</option>
-                <option value="Product">Product</option>
-                <option value="Finance">Finance</option>
+                <option value="Product & Design">Product & Design</option>
+                <option value="Finance & Accounts">Finance & Accounts</option>
                 <option value="Operations">Operations</option>
               </select>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-            <Button variant="secondary" size="md" onClick={() => setModalOpen(false)}>
+          <div className="flex justify-end gap-2.5 pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" size="md">
+            <Button type="submit" size="sm">
               Send Invitation
             </Button>
           </div>

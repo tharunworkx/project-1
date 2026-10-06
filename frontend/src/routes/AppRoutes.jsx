@@ -22,6 +22,15 @@ import Categories from "../pages/administration/Categories";
 import Policies from "../pages/administration/Policies";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import { useAuth } from "../context/AuthContext";
+
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 export default function AppRoutes() {
   return (
@@ -31,8 +40,14 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Application routes wrapped with MainLayout */}
-        <Route element={<MainLayout />}>
+        {/* Application routes wrapped with MainLayout and ProtectedRoute */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
 

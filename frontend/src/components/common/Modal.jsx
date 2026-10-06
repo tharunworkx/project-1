@@ -29,94 +29,36 @@ export const Modal = ({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.55)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
       onClick={onClose}
     >
       <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: 'var(--radius-lg)',
-          width: '100%',
-          maxWidth,
-          boxShadow: 'var(--shadow-xl)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '90vh',
-          animation: 'fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
+        className="w-full bg-card text-card-foreground rounded-xl border border-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-150"
+        style={{ maxWidth }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h3 className="text-base font-semibold text-foreground">
             {title}
           </h3>
           <button
             onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              padding: '0.25rem',
-              borderRadius: 'var(--radius-sm)',
-              transition: 'all 0.15s ease',
-            }}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             aria-label="Close modal"
           >
-            <X size={20} />
+            <X className="size-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div
-          style={{
-            padding: '1.5rem',
-            overflowY: 'auto',
-            flex: 1,
-            color: 'var(--text-main)',
-          }}
-        >
+        <div className="p-6 overflow-y-auto flex-1 text-sm text-foreground space-y-4">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--border-subtle)',
-              backgroundColor: '#f8fafc',
-              borderBottomLeftRadius: 'var(--radius-lg)',
-              borderBottomRightRadius: 'var(--radius-lg)',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-            }}
-          >
+          <div className="px-6 py-3.5 border-t border-border bg-muted/30 flex items-center justify-end gap-2.5">
             {footer}
           </div>
         )}
