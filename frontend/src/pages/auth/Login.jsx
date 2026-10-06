@@ -28,7 +28,7 @@ export const Login = () => {
     }
     setError('');
     try {
-      await login(email, password, activeRole);
+      await login(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Invalid login credentials');
@@ -38,7 +38,14 @@ export const Login = () => {
   const handleGoogleLogin = async () => {
     setError('');
     try {
-      await login(email || 'user@company.com', password || 'password123');
+      const targetEmail = email?.trim() || 'user@company.com';
+      const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
+      const registered = users.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase());
+      if (registered) {
+        await login(registered.email, registered.password);
+      } else {
+        await login(targetEmail, 'password123');
+      }
       navigate('/dashboard');
     } catch (err) {
       setError('Google authentication failed');
@@ -83,7 +90,7 @@ export const Login = () => {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full h-10 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-[0.99] text-zinc-800 dark:text-zinc-100 font-medium text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer mb-4"
+          className="w-full h-10 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-[0.99] text-zinc-800 dark:text-zinc-100 font-medium text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer"
         >
           <svg className="size-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -105,6 +112,16 @@ export const Login = () => {
           </svg>
           <span>Continue with Google</span>
         </button>
+
+        {/* Divider with "or" */}
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+          </div>
+          <div className="relative bg-white dark:bg-zinc-900 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            or
+          </div>
+        </div>
 
         {/* Clean Login Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -182,7 +199,7 @@ export const Login = () => {
             disabled={loading}
             className="w-full h-10 rounded-lg bg-[#1c1c1e] hover:bg-black active:scale-[0.99] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-medium text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center cursor-pointer mt-1.5 disabled:opacity-60"
           >
-            {loading ? 'Signing in...' : 'Continue with email'}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         {/* Footer sign up link */}

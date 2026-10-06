@@ -12,17 +12,79 @@ const DEFAULT_DEMO_USER = {
   avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
 };
 
+const INITIAL_REGISTERED_USERS = [
+  {
+    id: 'usr_tharun',
+    name: 'Tharun',
+    email: 'tharun@mail.com',
+    password: 'Tharun@123',
+    role: 'Admin',
+    department: 'Engineering',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Tharun',
+  },
+  {
+    id: 'usr_001',
+    name: 'Alex Morgan',
+    email: 'alex.morgan@company.com',
+    password: 'password123',
+    role: 'Admin',
+    department: 'Finance & Operations',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+  },
+];
+
+const getRegisteredUsers = () => {
+  try {
+    const stored = localStorage.getItem('registered_users');
+    if (!stored) {
+      localStorage.setItem('registered_users', JSON.stringify(INITIAL_REGISTERED_USERS));
+      return INITIAL_REGISTERED_USERS;
+    }
+    const parsed = JSON.parse(stored);
+    let updated = false;
+    INITIAL_REGISTERED_USERS.forEach((initUser) => {
+      if (!parsed.some((u) => u.email?.toLowerCase() === initUser.email.toLowerCase())) {
+        parsed.push(initUser);
+        updated = true;
+      }
+    });
+    if (updated) {
+      localStorage.setItem('registered_users', JSON.stringify(parsed));
+    }
+    return parsed;
+  } catch {
+    return INITIAL_REGISTERED_USERS;
+  }
+};
+
+const saveRegisteredUser = (userRecord) => {
+  try {
+    const users = getRegisteredUsers();
+    const index = users.findIndex(
+      (u) => u.email?.toLowerCase() === userRecord.email?.toLowerCase()
+    );
+    if (index >= 0) {
+      users[index] = { ...users[index], ...userRecord };
+    } else {
+      users.push(userRecord);
+    }
+    localStorage.setItem('registered_users', JSON.stringify(users));
+  } catch (err) {
+    console.error('Failed to save registered user:', err);
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('user');
-      return stored ? JSON.parse(stored) : DEFAULT_DEMO_USER;
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return DEFAULT_DEMO_USER;
+      return null;
     }
   });
 
-  const [token, setToken] = useState(() => localStorage.getItem('token') || 'demo-jwt-token-12345');
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -43,50 +105,72 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, roleOverride = null) => {
     setLoading(true);
+    const normalizedEmail = (email || '').toLowerCase().trim();
     try {
-      // Attempt backend API call first
-      const data = await authService.login({ email, password });
-      setUser(data.user);
-      setToken(data.token);
-      return data.user;
-    } catch (err) {
-      // Graceful demo fallback if backend server isn't running yet
-      console.warn('Backend unavailable, using client session:', err);
-
-      let inferredRole = roleOverride || 'Admin';
-      let inferredName = 'Alex Morgan';
-      let inferredDept = 'Finance & Operations';
-
-      if (email?.includes('karthik')) {
-        inferredRole = roleOverride || 'Finance Executive';
-        inferredName = 'Karthik Mohan';
-        inferredDept = 'Finance & Accounts';
-      } else if (email?.includes('anita')) {
-        inferredRole = roleOverride || 'Finance Manager / CFO';
-        inferredName = 'Anita Desai';
-        inferredDept = 'Executive Finance';
-      } else if (email?.includes('arun')) {
-        inferredRole = roleOverride || 'Employee';
-        inferredName = 'Arun Kumar';
-        inferredDept = 'Engineering';
-      } else if (email?.includes('priya') || email?.includes('wilson')) {
-        inferredRole = roleOverride || 'Manager';
-        inferredName = 'Priya Sharma';
-        inferredDept = 'Marketing';
-      } else if (roleOverride) {
-        inferredRole = roleOverride;
+      // 1. Attempt backend API call first
+      try {
+        const data = await authService.login({ email: normalizedEmail, password });
+        if (data?.user) {
+          setUser(data.user);
+          setToken(data.token || `token_${Date.now()}`);
+          return data.user;
+        }
+      } catch (backendErr) {
+        console.warn('Backend unavailable, verifying locally:', backendErr);
       }
 
-      const demoUser = {
-        ...DEFAULT_DEMO_USER,
-        email: email || DEFAULT_DEMO_USER.email,
-        name: inferredName,
-        role: inferredRole,
-        department: inferredDept,
-      };
-      setUser(demoUser);
-      setToken('demo-session-token');
-      return demoUser;
+      // 2. Check local registered users store
+      const users = getRegisteredUsers();
+      const registered = users.find(
+        (u) => u.email?.toLowerCase() === normalizedEmail
+      );
+
+      if (registered) {
+        if (registered.password && registered.password !== password) {
+          throw 'Invalid login credentials';
+        }
+        const sessionUser = {
+          id: registered.id || `usr_${Date.now()}`,
+          name: registered.name || 'User',
+          email: registered.email,
+          role: roleOverride || registered.role || 'Employee',
+          department: registered.department || 'Engineering',
+          avatar: registered.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(registered.name || 'User')}`,
+        };
+        setUser(sessionUser);
+        setToken(`session-token-${Date.now()}`);
+        return sessionUser;
+      }
+
+      // 3. Demo accounts mapping
+      const demoAccounts = [
+        { email: 'alex.morgan@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Finance & Operations' },
+        { email: 'karthik@company.com', name: 'Karthik Mohan', role: 'Finance Executive', department: 'Finance & Accounts' },
+        { email: 'anita@company.com', name: 'Anita Desai', role: 'Finance Manager / CFO', department: 'Executive Finance' },
+        { email: 'arun@company.com', name: 'Arun Kumar', role: 'Employee', department: 'Engineering' },
+        { email: 'priya@company.com', name: 'Priya Sharma', role: 'Manager', department: 'Marketing' },
+        { email: 'user@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Finance & Operations' },
+      ];
+
+      const matchedDemo = demoAccounts.find((d) =>
+        normalizedEmail.includes(d.email.split('@')[0])
+      );
+
+      if (matchedDemo) {
+        const demoUser = {
+          ...DEFAULT_DEMO_USER,
+          email: normalizedEmail,
+          name: matchedDemo.name,
+          role: roleOverride || matchedDemo.role,
+          department: matchedDemo.department,
+        };
+        setUser(demoUser);
+        setToken(`demo-session-token-${Date.now()}`);
+        return demoUser;
+      }
+
+      // 4. If credentials don't match any registered or demo account
+      throw 'Invalid login credentials';
     } finally {
       setLoading(false);
     }
@@ -95,23 +179,44 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     setLoading(true);
     try {
-      const data = await authService.register(userData);
-      setUser(data.user);
-      setToken(data.token);
-      return data.user;
-    } catch (err) {
-      console.warn('Backend unavailable, creating local demo profile:', err);
+      const email = (userData.email || '').toLowerCase().trim();
       const newUser = {
         id: `usr_${Date.now()}`,
-        name: userData.name || 'New User',
-        email: userData.email,
+        name: userData.name?.trim() || (email ? email.split('@')[0] : 'New User'),
+        email: email,
+        password: userData.password,
         role: userData.role || 'Employee',
         department: userData.department || 'Engineering',
         avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userData.name || 'User')}`,
       };
-      setUser(newUser);
-      setToken('demo-session-token');
-      return newUser;
+
+      // Always save to persistent registered_users store in localStorage
+      saveRegisteredUser(newUser);
+
+      // Attempt backend registration if available
+      try {
+        const data = await authService.register(userData);
+        if (data?.user) {
+          setUser(data.user);
+          setToken(data.token || `token_${Date.now()}`);
+          return data.user;
+        }
+      } catch (backendErr) {
+        console.warn('Backend unavailable, continuing with local session:', backendErr);
+      }
+
+      // Establish local session
+      const sessionUser = {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        department: newUser.department,
+        avatar: newUser.avatar,
+      };
+      setUser(sessionUser);
+      setToken(`demo-session-token-${Date.now()}`);
+      return sessionUser;
     } finally {
       setLoading(false);
     }
