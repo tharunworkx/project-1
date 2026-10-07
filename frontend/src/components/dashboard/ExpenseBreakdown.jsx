@@ -26,7 +26,6 @@ const spendingData = [
     subtitle: "Flights & Train booking",
     spent: "₹2,72,500",
     progress: 75,
-    color: "bg-blue-500",
   },
   {
     icon: Utensils,
@@ -34,7 +33,6 @@ const spendingData = [
     subtitle: "Client dinners & Lunches",
     spent: "₹1,45,200",
     progress: 55,
-    color: "bg-amber-500",
   },
   {
     icon: Hotel,
@@ -42,7 +40,6 @@ const spendingData = [
     subtitle: "Hotels & Stays",
     spent: "₹1,82,000",
     progress: 68,
-    color: "bg-purple-500",
   },
   {
     icon: Fuel,
@@ -50,7 +47,6 @@ const spendingData = [
     subtitle: "Local travel allowance",
     spent: "₹94,500",
     progress: 42,
-    color: "bg-emerald-500",
   },
   {
     icon: Building,
@@ -58,7 +54,6 @@ const spendingData = [
     subtitle: "Hardware & Consumables",
     spent: "₹72,400",
     progress: 30,
-    color: "bg-indigo-500",
   },
 ];
 
@@ -118,7 +113,7 @@ export default function ExpenseBreakdown() {
               </div>
               <div className="flex flex-col items-end gap-1.5 min-w-28">
                 <span className="text-xs font-semibold text-foreground">{item.spent}</span>
-                <Progress value={item.progress} className="w-28 h-1.5" indicatorClassName={item.color} />
+                <Progress value={item.progress} className="w-28 h-1.5" indicatorClassName="bg-black dark:bg-white" />
               </div>
             </div>
           );

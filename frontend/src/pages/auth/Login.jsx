@@ -6,8 +6,8 @@ import {
   AlertCircle,
   Building2,
   Shield,
+  Check,
 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { CustomSelect } from '@/components/ui/select';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
 import { useAuth } from '../../context/AuthContext';
@@ -22,7 +22,7 @@ export const Login = () => {
   const [department, setDepartment] = useState('Engineering & DevOps');
   const [role, setRole] = useState('Employee');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
 
   // Handle department change with smart role defaults
@@ -284,19 +284,31 @@ export const Login = () => {
           </div>
 
           {/* Remember me option */}
-          <div className="flex items-center gap-2 pt-0.5">
-            <Checkbox
-              id="remember"
-              checked={rememberMe}
-              onCheckedChange={setRememberMe}
-              className="rounded-[4px] border-zinc-700 bg-zinc-900 data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-zinc-950"
-            />
-            <label
-              htmlFor="remember"
-              className="text-xs text-zinc-400 cursor-pointer select-none"
+          <div
+            role="checkbox"
+            aria-checked={rememberMe}
+            tabIndex={0}
+            onClick={() => setRememberMe(!rememberMe)}
+            onKeyDown={(e) => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                setRememberMe(!rememberMe);
+              }
+            }}
+            className="flex items-center gap-2 pt-0.5 cursor-pointer select-none group outline-none w-fit focus-visible:ring-1 focus-visible:ring-zinc-400 rounded-sm"
+          >
+            <div
+              className={`size-4 rounded-[4px] border transition-all flex items-center justify-center shrink-0 ${
+                rememberMe
+                  ? "bg-white border-white text-zinc-950 shadow-xs"
+                  : "border-zinc-700 bg-zinc-900/90 group-hover:border-zinc-500"
+              }`}
             >
+              {rememberMe && <Check className="size-3 stroke-[3]" />}
+            </div>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-300 transition-colors">
               Remember this device for 30 days
-            </label>
+            </span>
           </div>
 
           {/* Submit button */}
