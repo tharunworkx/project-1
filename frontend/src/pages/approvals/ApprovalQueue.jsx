@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import expenseService from '../../services/expenseService';
 import {
   Check,
   X,
@@ -146,6 +147,47 @@ export const ApprovalQueue = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [notification, setNotification] = useState('');
 
+  useEffect(() => {
+    const loadPendingApprovals = async () => {
+      try {
+        const dbExpenses = await expenseService.getExpenses({ status: 'PENDING' });
+        if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
+          const pendingFromDb = dbExpenses
+            .filter((e) => (e.status || '').toUpperCase() === 'PENDING')
+            .map((e) => {
+              const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
+              const initials = claimantName.slice(0, 2).toUpperCase();
+              const numAmount = parseFloat(e.amount) || 0;
+              const formattedAmount = `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+              const formattedDate = e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+              return {
+                id: `EXP-${e.id}`,
+                dbId: e.id,
+                claimant: claimantName,
+                email: e.submittedBy || 'employee@company.com',
+                avatarFallback: initials,
+                department: e.department || 'Engineering',
+                merchant: e.title || 'Corporate Vendor',
+                title: e.description || e.title || 'Expense Claim',
+                category: e.category || 'General',
+                paymentMode: 'Direct Reimbursement',
+                amount: formattedAmount,
+                numericAmount: numAmount,
+                date: formattedDate,
+                status: 'pending',
+                policyFlag: numAmount > 25000 ? 'Requires VP Sign-off' : (e.category?.includes('Food') && numAmount > 5000 ? 'Meal limit exceeded' : null),
+              };
+            });
+          setItems([...pendingFromDb, ...pendingApprovalsData]);
+        }
+      } catch (err) {
+        console.warn('Could not load pending expenses from backend:', err);
+      }
+    };
+
+    loadPendingApprovals();
+  }, []);
+
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -160,21 +202,47 @@ export const ApprovalQueue = () => {
     }
   };
 
-  const handleApprove = (id) => {
+  const handleApprove = async (id) => {
+    const item = items.find((i) => i.id === id);
+    if (item?.dbId) {
+      try {
+        await expenseService.approveExpense(item.dbId);
+      } catch (err) {
+        console.error('Failed to approve in backend:', err);
+      }
+    }
     setItems((prev) => prev.filter((item) => item.id !== id));
     setSelectedIds((prev) => prev.filter((i) => i !== id));
     setNotification(`Claim ${id} approved successfully`);
     setTimeout(() => setNotification(''), 4000);
   };
 
-  const handleReject = (id) => {
+  const handleReject = async (id) => {
+    const item = items.find((i) => i.id === id);
+    if (item?.dbId) {
+      try {
+        await expenseService.rejectExpense(item.dbId);
+      } catch (err) {
+        console.error('Failed to reject in backend:', err);
+      }
+    }
     setItems((prev) => prev.filter((item) => item.id !== id));
     setSelectedIds((prev) => prev.filter((i) => i !== id));
     setNotification(`Claim ${id} rejected`);
     setTimeout(() => setNotification(''), 4000);
   };
 
-  const handleBatchApprove = () => {
+  const handleBatchApprove = async () => {
+    for (const id of selectedIds) {
+      const item = items.find((i) => i.id === id);
+      if (item?.dbId) {
+        try {
+          await expenseService.approveExpense(item.dbId);
+        } catch (err) {
+          console.error('Failed to batch approve in backend:', err);
+        }
+      }
+    }
     setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
     setNotification(`Batch approved ${selectedIds.length} expense claims`);
     setSelectedIds([]);

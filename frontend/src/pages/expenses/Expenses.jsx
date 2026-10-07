@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import expenseService from '../../services/expenseService';
 import {
   Plus,
   Search,
@@ -152,8 +153,45 @@ export const Expenses = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [expenseList, setExpenseList] = useState(mockExpenses);
 
-  const filtered = mockExpenses.filter((item) => {
+  useEffect(() => {
+    const loadExpenses = async () => {
+      try {
+        const dbExpenses = await expenseService.getExpenses();
+        if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
+          const mapped = dbExpenses.map((e) => {
+            const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
+            const initials = claimantName.slice(0, 2).toUpperCase();
+            const formattedAmount = e.amount ? `₹${Number(e.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹0.00';
+            const formattedDate = e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+            return {
+              id: `EXP-${e.id}`,
+              merchant: e.title || 'Corporate Vendor',
+              title: e.description || e.title || 'Expense Claim',
+              category: e.category || 'General',
+              claimant: claimantName,
+              email: e.submittedBy || 'employee@company.com',
+              avatarFallback: initials,
+              department: e.department || 'General',
+              paymentMode: 'Direct Reimbursement',
+              amount: formattedAmount,
+              date: formattedDate,
+              status: e.status ? (e.status.charAt(0).toUpperCase() + e.status.slice(1).toLowerCase()) : 'Pending',
+              receiptUrl: e.receiptUrl,
+              proofImage: e.receiptUrl,
+            };
+          });
+          setExpenseList([...mapped, ...mockExpenses]);
+        }
+      } catch (err) {
+        console.warn('Could not fetch expenses from API:', err);
+      }
+    };
+    loadExpenses();
+  }, []);
+
+  const filtered = expenseList.filter((item) => {
     const matchesSearch =
       item.claimant.toLowerCase().includes(search.toLowerCase()) ||
       item.category.toLowerCase().includes(search.toLowerCase()) ||
@@ -312,7 +350,7 @@ export const Expenses = () => {
 
           {/* Pagination Footer */}
           <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">
-            <span>Showing 1 to {filtered.length} of {mockExpenses.length} entries</span>
+            <span>Showing 1 to {filtered.length} of {expenseList.length} entries</span>
             <div className="flex items-center gap-1.5">
               <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled>
                 <ChevronLeft className="size-3.5" />

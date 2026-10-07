@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import expenseService from '../../services/expenseService';
 import {
   Receipt,
   Search,
@@ -73,7 +74,61 @@ export default function Receipts() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
-  const allExpenses = expenseStore.getExpenses();
+  const [allExpenses, setAllExpenses] = useState(() => expenseStore.getExpenses());
+
+  useEffect(() => {
+    const fetchLiveReceipts = async () => {
+      try {
+        const dbExpenses = await expenseService.getExpenses();
+        if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
+          const liveItems = dbExpenses
+            .filter((e) => !!(e.receiptUrl))
+            .map((e) => {
+              const claimantName = e.submittedBy?.includes('@')
+                ? e.submittedBy.split('@')[0]
+                : (e.submittedBy || 'Employee');
+              const initials = claimantName.slice(0, 2).toUpperCase();
+              const formattedAmount = e.amount
+                ? `₹${Number(e.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                : '₹0.00';
+              const formattedDate = e.createdAt
+                ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : 'Today';
+
+              return {
+                id: `EXP-${e.id}`,
+                merchant: e.title || 'Corporate Vendor',
+                title: e.description || e.title || 'Expense Claim',
+                category: e.category || 'General',
+                claimant: claimantName,
+                email: e.submittedBy || 'employee@company.com',
+                avatarFallback: initials,
+                department: e.department || 'General',
+                amount: formattedAmount,
+                date: formattedDate,
+                status: e.status ? (e.status.charAt(0).toUpperCase() + e.status.slice(1).toLowerCase()) : 'Pending',
+                receiptUrl: e.receiptUrl,
+                proofImage: e.receiptUrl,
+                receiptName: `receipt_EXP-${e.id}.jpg`,
+                receiptAttached: true,
+              };
+            });
+
+          if (liveItems.length > 0) {
+            setAllExpenses((prev) => {
+              const liveIds = new Set(liveItems.map((i) => i.id));
+              const remaining = prev.filter((i) => !liveIds.has(i.id));
+              return [...liveItems, ...remaining];
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch receipts from backend/Supabase:', err);
+      }
+    };
+
+    fetchLiveReceipts();
+  }, []);
 
   // Filter to items that have an uploaded receipt or proof
   const receiptItems = allExpenses.filter(

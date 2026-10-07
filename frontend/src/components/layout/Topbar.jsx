@@ -45,7 +45,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ModeToggle from "./ModeToggle";
 import { useAuth } from "../../context/AuthContext";
 import NotificationBellDropdown from "../notifications/NotificationBellDropdown";
-import RoleSwitcher from "../common/RoleSwitcher";
 
 const routeNames = {
   "/": "Dashboard",
@@ -354,9 +353,6 @@ export default function Topbar() {
               </div>
             )}
           </div>
-
-          {/* Role Persona Switcher (Person 3 Demo) */}
-          <RoleSwitcher />
 
           {/* Dark / Light Mode Toggle */}
           <ModeToggle />

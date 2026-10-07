@@ -11,6 +11,7 @@ target/
 # Agents & AI scratch
 .agents/
 */.agents/
+skills-lock.json
 
 # Logs
 *.log
@@ -23,3 +24,9 @@ yarn-debug.log*
 .vscode/
 *.local
 powershell.cmd
+
+# Environment & Secret files
+.env
+.env.*
+application-local.properties
+*.local.properties

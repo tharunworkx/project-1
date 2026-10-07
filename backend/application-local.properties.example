@@ -1,0 +1,9 @@
+# ===================================================================
+# Template for Local Secret Configuration
+# 1. Copy this file and name it 'application-local.properties'
+# 2. Replace 'your_supabase_password_here' with your actual database password
+# 3. application-local.properties is in .gitignore and will never be pushed to GitHub
+# ===================================================================
+SPRING_DATASOURCE_PASSWORD=your_supabase_password_here
+spring.datasource.password=your_supabase_password_here
+

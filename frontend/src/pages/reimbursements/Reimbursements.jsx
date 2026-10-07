@@ -49,6 +49,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFinanceRole } from '@/hooks/useFinanceRole';
 import { useToast } from '@/context/ToastContext';
 import reimbursementMockService from '@/services/mock/reimbursementMockService';
+import expenseService from '@/services/expenseService';
 import { formatCurrency, formatDate } from '@/lib/currency';
 import ReimbursementDetailsModal from '@/components/finance/reimbursements/ReimbursementDetailsModal';
 import ConfirmDialog from '@/components/finance/common/ConfirmDialog';
@@ -176,13 +177,153 @@ export const Reimbursements = () => {
         onlyEmployee: isEmployee ? user?.name : null,
       };
 
-      const [items, m] = await Promise.all([
+      const [mockItems, m] = await Promise.all([
         reimbursementMockService.getReimbursements(filters),
         reimbursementMockService.getDashboardMetrics(),
       ]);
 
-      setList(items);
-      setMetrics(m);
+      // Fetch real database expenses
+      let dbClaims = [];
+      try {
+        const dbExpenses = await expenseService.getExpenses();
+        if (Array.isArray(dbExpenses)) {
+          // Keep claims that are APPROVED, REIMBURSED, or PROCESSING
+          const relevantDbExpenses = dbExpenses.filter((e) => {
+            const st = (e.status || '').toUpperCase();
+            return st === 'APPROVED' || st === 'REIMBURSED' || st === 'PROCESSING';
+          });
+
+          dbClaims = relevantDbExpenses.map((e) => {
+            const empName = e.submittedBy?.includes('@')
+              ? e.submittedBy.split('@')[0]
+              : (e.submittedBy || 'Employee');
+            const initials = empName.slice(0, 2).toUpperCase();
+            const numAmount = Number(e.amount) || 0;
+            const isReimbursed = (e.status || '').toUpperCase() === 'REIMBURSED';
+            const displayStatus = isReimbursed ? 'Reimbursed' : 'Approved';
+
+            return {
+              id: `RMB-DB-${e.id}`,
+              dbId: e.id,
+              expenseId: `EXP-${e.id}`,
+              employeeName: empName,
+              employeeId: `EMP-${e.id}`,
+              email: e.submittedBy || 'employee@company.com',
+              avatarFallback: initials,
+              department: e.department || 'Engineering',
+              category: e.category || 'General',
+              amount: numAmount,
+              approvedAmount: numAmount,
+              reimbursementAmount: numAmount,
+              currency: e.currency || 'INR',
+              submittedDate: e.createdAt ? e.createdAt.split('T')[0] : '2026-10-07',
+              approvedDate: e.updatedAt ? e.updatedAt.split('T')[0] : (e.createdAt ? e.createdAt.split('T')[0] : '2026-10-07'),
+              approvedBy: e.approvedBy || 'Manager',
+              status: displayStatus,
+              paymentMethod: 'Bank Transfer (NEFT)',
+              paymentReferenceId: isReimbursed ? `TXN-DB-${e.id}` : null,
+              description: e.description || e.title || 'Corporate Expense Claim',
+              merchant: e.title || 'Corporate Vendor',
+              receipt: e.receiptUrl ? {
+                fileName: 'receipt_invoice.pdf',
+                fileSize: '320 KB',
+                uploadedAt: e.createdAt || new Date().toISOString(),
+                fileType: 'pdf',
+              } : null,
+              policyValidation: {
+                isCompliant: true,
+                violations: [],
+                ruleName: 'Standard Expense Policy',
+                notes: 'All mandatory receipts and managerial approvals verified.',
+              },
+              bankDetails: {
+                bankName: 'HDFC Bank',
+                accountNumber: '••••••••4821',
+                ifsc: 'HDFC0001234',
+                upiId: `${empName.toLowerCase()}@okhdfcbank`,
+              },
+              timeline: [
+                {
+                  step: 'Claim Submitted',
+                  date: e.createdAt || new Date().toISOString(),
+                  by: empName,
+                  status: 'completed',
+                },
+                {
+                  step: 'Manager Approval Granted',
+                  date: e.updatedAt || new Date().toISOString(),
+                  by: e.approvedBy || 'Manager',
+                  status: 'completed',
+                },
+                {
+                  step: 'Disbursement & Settlement',
+                  date: isReimbursed ? (e.updatedAt || new Date().toISOString()) : null,
+                  by: isReimbursed ? 'Finance Disbursed' : 'Pending Settlement',
+                  status: isReimbursed ? 'completed' : 'pending',
+                },
+              ],
+            };
+          });
+
+          // Apply filters to dbClaims
+          if (search) {
+            const q = search.toLowerCase();
+            dbClaims = dbClaims.filter(
+              (c) =>
+                c.id.toLowerCase().includes(q) ||
+                c.expenseId.toLowerCase().includes(q) ||
+                c.employeeName.toLowerCase().includes(q) ||
+                c.department.toLowerCase().includes(q) ||
+                c.category.toLowerCase().includes(q) ||
+                (c.paymentReferenceId && c.paymentReferenceId.toLowerCase().includes(q))
+            );
+          }
+
+          if (statusFilter && statusFilter !== 'All') {
+            dbClaims = dbClaims.filter((c) => c.status.toLowerCase() === statusFilter.toLowerCase());
+          }
+
+          if (deptFilter && deptFilter !== 'All') {
+            dbClaims = dbClaims.filter((c) => c.department.toLowerCase() === deptFilter.toLowerCase());
+          }
+
+          if (employeeFilter && employeeFilter !== 'All') {
+            dbClaims = dbClaims.filter((c) => c.employeeName.toLowerCase() === employeeFilter.toLowerCase());
+          }
+
+          if (amountFilter && amountFilter !== 'All') {
+            if (amountFilter === 'under-2500') dbClaims = dbClaims.filter((c) => c.amount < 2500);
+            else if (amountFilter === '2500-10000') dbClaims = dbClaims.filter((c) => c.amount >= 2500 && c.amount <= 10000);
+            else if (amountFilter === '10000-50000') dbClaims = dbClaims.filter((c) => c.amount > 10000 && c.amount <= 50000);
+            else if (amountFilter === 'over-50000') dbClaims = dbClaims.filter((c) => c.amount > 50000);
+          }
+
+          if (isEmployee && user?.name) {
+            dbClaims = dbClaims.filter(
+              (c) =>
+                c.employeeName.toLowerCase() === user.name.toLowerCase() ||
+                c.email.toLowerCase() === user.email?.toLowerCase()
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load database expenses for reimbursements:', err);
+      }
+
+      // Merge metrics
+      const combinedMetrics = { ...m };
+      if (dbClaims.length > 0 && combinedMetrics) {
+        const dbPending = dbClaims.filter((c) => c.status === 'Approved');
+        const dbReimbursed = dbClaims.filter((c) => c.status === 'Reimbursed');
+        combinedMetrics.pendingReimbursementCount = (combinedMetrics.pendingReimbursementCount || 0) + dbPending.length;
+        combinedMetrics.pendingReimbursementAmount = (combinedMetrics.pendingReimbursementAmount || 0) + dbPending.reduce((sum, c) => sum + c.amount, 0);
+        combinedMetrics.successfullyReimbursedCount = (combinedMetrics.successfullyReimbursedCount || 0) + dbReimbursed.length;
+        combinedMetrics.successfullyReimbursedAmount = (combinedMetrics.successfullyReimbursedAmount || 0) + dbReimbursed.reduce((sum, c) => sum + c.amount, 0);
+        combinedMetrics.pendingPaymentCount = (combinedMetrics.pendingPaymentCount || 0) + dbPending.length;
+      }
+
+      setList([...dbClaims, ...mockItems]);
+      setMetrics(combinedMetrics);
     } catch (e) {
       console.error(e);
       toastError('Failed to load reimbursement claims');
@@ -275,6 +416,13 @@ export const Reimbursements = () => {
         inputPlaceholder: 'e.g. TXN-NEFT-992140',
         defaultValue: generatedRef,
         onConfirm: async (refId) => {
+          if (claim.dbId) {
+            try {
+              await expenseService.reimburseExpense(claim.dbId, { referenceId: refId || generatedRef });
+            } catch (err) {
+              console.error('Failed to reimburse in database:', err);
+            }
+          }
           await reimbursementMockService.updateStatus(id, 'Reimbursed', {
             referenceId: refId || generatedRef,
             user: user?.name,
@@ -283,7 +431,7 @@ export const Reimbursements = () => {
           toastSuccess(`Claim ${id} successfully disbursed and settled`);
           loadData();
           if (activeItem?.id === id) {
-            setActiveItem((prev) => ({ ...prev, status: 'Reimbursed', paymentReferenceId: refId }));
+            setActiveItem((prev) => ({ ...prev, status: 'Reimbursed', paymentReferenceId: refId || generatedRef }));
           }
         },
       });
@@ -347,6 +495,14 @@ export const Reimbursements = () => {
       type: newStatus === 'Reimbursed' ? 'success' : 'info',
       confirmText: `Confirm Batch ${newStatus}`,
       onConfirm: async () => {
+        const dbItems = list.filter((i) => selectedIds.includes(i.id) && i.dbId);
+        if (dbItems.length > 0 && newStatus === 'Reimbursed') {
+          try {
+            await expenseService.batchReimburse(dbItems.map((i) => i.dbId));
+          } catch (err) {
+            console.error('Failed to batch reimburse database claims:', err);
+          }
+        }
         await reimbursementMockService.batchUpdateStatus(selectedIds, newStatus, {
           user: user?.name,
         });

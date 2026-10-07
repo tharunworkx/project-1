@@ -4,6 +4,12 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Local sensitive properties & environment files (NEVER COMMIT)
+application-local.properties
+.env
+.env.*
+.env.properties
+
 ### STS ###
 .apt_generated
 .classpath

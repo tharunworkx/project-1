@@ -154,7 +154,9 @@ export const Register = () => {
               options={[
                 { value: "Employee", label: "Employee" },
                 { value: "Manager", label: "Manager" },
-                { value: "Finance Admin", label: "Finance Admin" },
+                { value: "Finance Executive", label: "Finance Executive" },
+                { value: "Finance Manager / CFO", label: "Finance Manager / CFO" },
+                { value: "Admin", label: "Admin" },
               ]}
             />
           </div>

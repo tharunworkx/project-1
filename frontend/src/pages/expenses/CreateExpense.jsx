@@ -30,6 +30,7 @@ import expenseService from '../../services/expenseService';
 import expenseStore from '../../services/expenseStore';
 import { useAuth } from '../../context/AuthContext';
 import { processReceiptImage, formatFileSize } from '../../utils/imageUtils';
+import { uploadReceiptToSupabase } from '../../services/supabaseStorage';
 
 export const CreateExpense = () => {
   const navigate = useNavigate();
@@ -132,6 +133,18 @@ export const CreateExpense = () => {
 
     setSavingDraft(true);
     try {
+      let finalReceiptUrl = proofData?.dataUrl || null;
+      if (receiptFile) {
+        try {
+          const uploadRes = await uploadReceiptToSupabase(receiptFile);
+          if (uploadRes?.url) {
+            finalReceiptUrl = uploadRes.url;
+          }
+        } catch (storageErr) {
+          console.warn('Supabase Storage upload warning (falling back to dataUrl):', storageErr);
+        }
+      }
+
       await expenseService.createExpense(
         {
           ...formData,
@@ -140,8 +153,8 @@ export const CreateExpense = () => {
           numericAmount: parseFloat(formData.amount) || 0,
           amount: parseFloat(formData.amount) || 0,
           receiptAttached: !!proofData,
-          proofImage: proofData?.dataUrl || null,
-          receiptUrl: proofData?.dataUrl || null,
+          proofImage: finalReceiptUrl,
+          receiptUrl: finalReceiptUrl,
           receiptName: proofData?.name || null,
           receiptSize: proofData?.size || 0,
         },
@@ -165,16 +178,30 @@ export const CreateExpense = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      let finalReceiptUrl = proofData?.dataUrl || null;
+      if (receiptFile) {
+        try {
+          const uploadRes = await uploadReceiptToSupabase(receiptFile);
+          if (uploadRes?.url) {
+            finalReceiptUrl = uploadRes.url;
+          }
+        } catch (storageErr) {
+          console.warn('Supabase Storage upload warning (falling back to dataUrl):', storageErr);
+        }
+      }
+
       await expenseService.createExpense(
         {
           ...formData,
+          title: formData.title || formData.merchant || 'Expense Claim',
+          submittedBy: user?.email || user?.name || 'Employee',
           id: existingDraftId || undefined,
-          status: 'Pending',
+          status: 'PENDING',
           numericAmount: parseFloat(formData.amount) || 0,
           amount: parseFloat(formData.amount) || 0,
           receiptAttached: !!proofData,
-          proofImage: proofData?.dataUrl || null,
-          receiptUrl: proofData?.dataUrl || null,
+          proofImage: finalReceiptUrl,
+          receiptUrl: finalReceiptUrl,
           receiptName: proofData?.name || null,
           receiptSize: proofData?.size || 0,
         },

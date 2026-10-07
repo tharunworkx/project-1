@@ -3,93 +3,33 @@ import authService from '../services/authService';
 
 const AuthContext = createContext(null);
 
-const DEFAULT_DEMO_USER = {
-  id: 'usr_001',
-  name: 'Alex Morgan',
-  email: 'alex.morgan@company.com',
-  role: 'Admin',
-  department: 'Finance & Operations',
-  avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-};
+const DEFAULT_DEMO_USER = null;
 
-const INITIAL_REGISTERED_USERS = [
-  {
-    id: 'usr_tharun',
-    name: 'Tharun',
-    email: 'tharun@mail.com',
-    password: 'Tharun@123',
-    role: 'Admin',
-    department: 'Engineering & DevOps',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Tharun',
-  },
-  {
-    id: 'usr_001',
-    name: 'Alex Morgan',
-    email: 'alex.morgan@company.com',
-    password: 'password123',
-    role: 'Admin',
-    department: 'Executive Management',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'usr_002',
-    name: 'Karthik Mohan',
-    email: 'karthik.m@company.com',
-    password: 'password123',
-    role: 'Finance Executive',
-    department: 'Finance & Accounts',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Karthik',
-  },
-  {
-    id: 'usr_003',
-    name: 'Anita Desai',
-    email: 'anita.d@company.com',
-    password: 'password123',
-    role: 'Finance Manager / CFO',
-    department: 'Finance & Accounts',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Anita',
-  },
-  {
-    id: 'usr_004',
-    name: 'Priya Sharma',
-    email: 'priya.s@company.com',
-    password: 'password123',
-    role: 'Manager',
-    department: 'Growth & Marketing',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Priya',
-  },
-  {
-    id: 'usr_005',
-    name: 'Arun Kumar',
-    email: 'arun.kumar@company.com',
-    password: 'password123',
-    role: 'Employee',
-    department: 'Engineering & DevOps',
-    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Arun',
-  },
-];
+const INITIAL_REGISTERED_USERS = [];
 
 const getRegisteredUsers = () => {
   try {
     const stored = localStorage.getItem('registered_users');
-    if (!stored) {
-      localStorage.setItem('registered_users', JSON.stringify(INITIAL_REGISTERED_USERS));
-      return INITIAL_REGISTERED_USERS;
-    }
+    if (!stored) return [];
     const parsed = JSON.parse(stored);
-    let updated = false;
-    INITIAL_REGISTERED_USERS.forEach((initUser) => {
-      if (!parsed.some((u) => u.email?.toLowerCase() === initUser.email.toLowerCase())) {
-        parsed.push(initUser);
-        updated = true;
-      }
-    });
-    if (updated) {
-      localStorage.setItem('registered_users', JSON.stringify(parsed));
+    const exampleEmails = [
+      'alex.morgan@company.com',
+      'karthik.m@company.com',
+      'anita.d@company.com',
+      'priya.s@company.com',
+      'arun.kumar@company.com',
+      'alex.m@company.com',
+      'rahul.s@company.com',
+      'sarah.j@company.com',
+      'divya.r@company.com'
+    ];
+    const filtered = parsed.filter((u) => !exampleEmails.includes(u.email?.toLowerCase()));
+    if (filtered.length !== parsed.length) {
+      localStorage.setItem('registered_users', JSON.stringify(filtered));
     }
-    return parsed;
+    return filtered;
   } catch {
-    return INITIAL_REGISTERED_USERS;
+    return [];
   }
 };
 
@@ -160,8 +100,8 @@ export const AuthProvider = ({ children }) => {
         if (data?.user) {
           const userWithOverrides = {
             ...data.user,
-            ...(roleOverride ? { role: roleOverride } : {}),
-            ...(departmentOverride ? { department: departmentOverride } : {}),
+            role: data.user.role || roleOverride || 'Employee',
+            department: data.user.department || departmentOverride || 'Engineering & DevOps',
           };
           setUser(userWithOverrides);
           setToken(data.token || `token_${Date.now()}`);
@@ -181,8 +121,8 @@ export const AuthProvider = ({ children }) => {
         if (registered.password && registered.password !== password) {
           throw 'Invalid login credentials';
         }
-        const assignedRole = roleOverride || registered.role || 'Employee';
-        const assignedDept = departmentOverride || registered.department || 'Engineering & DevOps';
+        const assignedRole = registered.role || roleOverride || 'Employee';
+        const assignedDept = registered.department || departmentOverride || 'Engineering & DevOps';
 
         const sessionUser = {
           id: registered.id || `usr_${Date.now()}`,
@@ -203,35 +143,6 @@ export const AuthProvider = ({ children }) => {
         setUser(sessionUser);
         setToken(`session-token-${Date.now()}`);
         return sessionUser;
-      }
-
-      // 3. Demo accounts mapping
-      const demoAccounts = [
-        { email: 'alex.morgan@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Executive Management' },
-        { email: 'karthik@company.com', name: 'Karthik Mohan', role: 'Finance Executive', department: 'Finance & Accounts' },
-        { email: 'anita@company.com', name: 'Anita Desai', role: 'Finance Manager / CFO', department: 'Finance & Accounts' },
-        { email: 'arun@company.com', name: 'Arun Kumar', role: 'Employee', department: 'Engineering & DevOps' },
-        { email: 'priya@company.com', name: 'Priya Sharma', role: 'Manager', department: 'Growth & Marketing' },
-        { email: 'user@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Executive Management' },
-      ];
-
-      const matchedDemo = demoAccounts.find((d) =>
-        normalizedEmail.includes(d.email.split('@')[0])
-      );
-
-      if (matchedDemo) {
-        const assignedRole = roleOverride || matchedDemo.role;
-        const assignedDept = departmentOverride || matchedDemo.department;
-        const demoUser = {
-          ...DEFAULT_DEMO_USER,
-          email: normalizedEmail,
-          name: matchedDemo.name,
-          role: assignedRole,
-          department: assignedDept,
-        };
-        setUser(demoUser);
-        setToken(`demo-session-token-${Date.now()}`);
-        return demoUser;
       }
 
       // 4. Fallback: dynamic session with chosen credentials, role & department
@@ -272,14 +183,27 @@ export const AuthProvider = ({ children }) => {
 
       // Attempt backend registration if available
       try {
-        const data = await authService.register(userData);
+        const payload = {
+          name: userData.name,
+          firstName: userData.name ? userData.name.split(' ')[0] : 'User',
+          lastName: userData.name && userData.name.includes(' ') ? userData.name.substring(userData.name.indexOf(' ') + 1) : 'Account',
+          email: email,
+          password: userData.password,
+          department: userData.department || 'Engineering',
+          role: userData.role || 'Employee',
+        };
+        const data = await authService.register(payload);
         if (data?.user) {
           setUser(data.user);
-          setToken(data.token || `token_${Date.now()}`);
+          setToken(data.token || data.accessToken || `token_${Date.now()}`);
           return data.user;
         }
       } catch (backendErr) {
-        console.warn('Backend unavailable, continuing with local session:', backendErr);
+        console.error('Backend registration error:', backendErr);
+        if (typeof backendErr === 'string' && (backendErr.includes('already exists') || backendErr.includes('Password') || backendErr.includes('valid'))) {
+          throw backendErr;
+        }
+        throw backendErr;
       }
 
       // Establish local session

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import userService from '../../services/userService';
 import {
   Plus,
   Search,
@@ -37,78 +38,7 @@ import {
 import { CustomSelect } from "@/components/ui/select";
 import Modal from '../../components/common/Modal';
 
-const initialUsers = [
-  {
-    id: 'usr_001',
-    name: 'Arun Kumar',
-    email: 'arun.kumar@company.com',
-    avatarFallback: 'AK',
-    role: 'Admin',
-    department: 'Executive Office',
-    status: 'Active',
-    lastActive: 'Just now',
-  },
-  {
-    id: 'usr_002',
-    name: 'Priya Sharma',
-    email: 'priya.s@company.com',
-    avatarFallback: 'PS',
-    role: 'Manager',
-    department: 'Marketing',
-    status: 'Active',
-    lastActive: '12 mins ago',
-  },
-  {
-    id: 'usr_003',
-    name: 'Rahul Sundaram',
-    email: 'rahul.s@company.com',
-    avatarFallback: 'RS',
-    role: 'Employee',
-    department: 'Engineering',
-    status: 'Active',
-    lastActive: '1 hour ago',
-  },
-  {
-    id: 'usr_004',
-    name: 'Karthik Mohan',
-    email: 'karthik.m@company.com',
-    avatarFallback: 'KM',
-    role: 'Finance Admin',
-    department: 'Finance & Accounts',
-    status: 'Active',
-    lastActive: 'Yesterday',
-  },
-  {
-    id: 'usr_005',
-    name: 'Divya Ramesh',
-    email: 'divya.r@company.com',
-    avatarFallback: 'DR',
-    role: 'Manager',
-    department: 'Product & Design',
-    status: 'Active',
-    lastActive: '2 days ago',
-  },
-  {
-    id: 'usr_006',
-    name: 'Alex Morgan',
-    email: 'alex.m@company.com',
-    avatarFallback: 'AM',
-    role: 'Employee',
-    department: 'Operations',
-    status: 'Active',
-    lastActive: '03 Oct 2026',
-  },
-  {
-    id: 'usr_007',
-    name: 'Sarah Jenkins',
-    email: 'sarah.j@company.com',
-    avatarFallback: 'SJ',
-    role: 'Employee',
-    department: 'Engineering',
-    status: 'Inactive',
-    lastActive: '18 Sep 2026',
-  },
-];
+const initialUsers = [];
 
 function RoleBadge({ role }) {
   const r = (role || '').toLowerCase();
@@ -126,10 +56,17 @@ function RoleBadge({ role }) {
       </Badge>
     );
   }
-  if (r === 'finance admin') {
+  if (r.includes('finance manager') || r.includes('cfo')) {
+    return (
+      <Badge className="bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 font-medium">
+        Finance Manager / CFO
+      </Badge>
+    );
+  }
+  if (r.includes('finance exec') || r === 'finance admin' || r === 'finance') {
     return (
       <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-medium">
-        Finance Admin
+        Finance Executive
       </Badge>
     );
   }
@@ -167,6 +104,65 @@ export const Users = () => {
     department: 'Engineering',
   });
 
+  useEffect(() => {
+    const loadUsers = async () => {
+      let finalUsers = [];
+      try {
+        const dbUsers = await userService.getUsers();
+        if (Array.isArray(dbUsers) && dbUsers.length > 0) {
+          finalUsers = dbUsers.map((u) => {
+            const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || u.email.split('@')[0];
+            const initials = fullName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+            return {
+              id: `usr_${u.id}`,
+              name: fullName,
+              email: u.email,
+              avatarFallback: initials,
+              role: u.role || 'Employee',
+              department: u.department || 'General',
+              status: 'Active',
+              lastActive: 'Just now',
+            };
+          });
+        }
+      } catch (err) {
+        console.warn('Could not fetch users from API, falling back to local list:', err);
+      }
+
+      // Also merge any users registered in localStorage that are not yet in finalUsers
+      try {
+        const localRegistered = JSON.parse(localStorage.getItem('registered_users') || '[]');
+        const base = finalUsers.length > 0 ? [...finalUsers] : [...initialUsers];
+        if (localRegistered.length > 0) {
+          localRegistered.forEach((lu) => {
+            if (lu.email && !base.some((m) => m.email?.toLowerCase() === lu.email?.toLowerCase())) {
+              const initials = (lu.name || 'User').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+              base.push({
+                id: lu.id || `usr_${Date.now()}`,
+                name: lu.name || 'User',
+                email: lu.email,
+                avatarFallback: initials,
+                role: lu.role || 'Employee',
+                department: lu.department || 'General',
+                status: 'Active',
+                lastActive: 'Just now',
+              });
+            }
+          });
+        }
+        finalUsers = base;
+      } catch (e) {
+        // ignore
+      }
+
+      if (finalUsers.length > 0) {
+        setUsers(finalUsers);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
   const filtered = users.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -174,29 +170,58 @@ export const Users = () => {
     u.role.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAddUser = (e) => {
+  const handleAddUser = async (e) => {
     e.preventDefault();
-    const initials = formData.name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || 'U';
+    try {
+      const created = await userService.createUser({
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        department: formData.department,
+      });
+      const fullName = `${created.firstName || ''} ${created.lastName || ''}`.trim() || created.name || formData.name;
+      const initials = fullName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'U';
 
-    const newUser = {
-      id: `usr_${Date.now()}`,
-      name: formData.name,
-      email: formData.email,
-      avatarFallback: initials,
-      role: formData.role,
-      department: formData.department,
-      status: 'Active',
-      lastActive: 'Just now',
-    };
-    setUsers([newUser, ...users]);
+      const newUser = {
+        id: `usr_${created.id || Date.now()}`,
+        name: fullName,
+        email: created.email || formData.email,
+        avatarFallback: initials,
+        role: created.role || formData.role,
+        department: created.department || formData.department,
+        status: 'Active',
+        lastActive: 'Just now',
+      };
+      setUsers([newUser, ...users]);
+    } catch (err) {
+      console.warn('Backend user creation error, adding locally:', err);
+      const initials = formData.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'U';
+
+      const newUser = {
+        id: `usr_${Date.now()}`,
+        name: formData.name,
+        email: formData.email,
+        avatarFallback: initials,
+        role: formData.role,
+        department: formData.department,
+        status: 'Active',
+        lastActive: 'Just now',
+      };
+      setUsers([newUser, ...users]);
+    }
     setModalOpen(false);
     setFormData({ name: '', email: '', role: 'Employee', department: 'Engineering' });
-    setNotification(`Invitation successfully sent to ${formData.email}`);
+    setNotification(`User successfully added: ${formData.email}`);
     setTimeout(() => setNotification(''), 4000);
   };
 
@@ -396,7 +421,8 @@ export const Users = () => {
                 options={[
                   { value: "Employee", label: "Employee" },
                   { value: "Manager", label: "Manager" },
-                  { value: "Finance Admin", label: "Finance Admin" },
+                  { value: "Finance Executive", label: "Finance Executive" },
+                  { value: "Finance Manager / CFO", label: "Finance Manager / CFO" },
                   { value: "Admin", label: "Admin" },
                 ]}
               />

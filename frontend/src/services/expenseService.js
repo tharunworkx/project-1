@@ -47,6 +47,16 @@ export const expenseService = {
     return response.data;
   },
 
+  reimburseExpense: async (id, paymentData = {}) => {
+    const response = await api.post(`/expenses/${id}/reimburse`, paymentData);
+    return response.data;
+  },
+
+  batchReimburse: async (ids) => {
+    const response = await api.post('/expenses/batch-reimburse', { ids });
+    return response.data;
+  },
+
   getDashboardStats: async () => {
     const response = await api.get('/expenses/stats/dashboard');
     return response.data;

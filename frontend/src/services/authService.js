@@ -10,7 +10,8 @@ export const authService = {
       }
       return response.data;
     } catch (error) {
-      throw error.response?.data?.message || 'Failed to sign in. Please verify credentials.';
+      const msg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to sign in. Please verify credentials.';
+      throw msg;
     }
   },
 
@@ -23,7 +24,8 @@ export const authService = {
       }
       return response.data;
     } catch (error) {
-      throw error.response?.data?.message || 'Registration failed. Please try again.';
+      const msg = error.response?.data?.message || error.response?.data?.error || error.message || 'Registration failed. Please try again.';
+      throw msg;
     }
   },
 
