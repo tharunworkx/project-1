@@ -19,6 +19,7 @@ import {
   PanelLeftOpen,
   Bell,
   Landmark,
+  FileText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -190,6 +191,11 @@ export function AppSidebar({ ...props }) {
         {
           label: "Expenses",
           href: "/expenses",
+          icon: FileText,
+        },
+        {
+          label: "Receipts",
+          href: "/receipts",
           icon: Receipt,
         },
         {

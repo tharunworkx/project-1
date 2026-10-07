@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import {
   Wallet,
@@ -14,26 +15,44 @@ import ExpenseTrend from "../../components/dashboard/ExpenseTrend";
 import ExpenseBreakdown from "../../components/dashboard/ExpenseBreakdown";
 import RecentExpenses from "../../components/dashboard/RecentExpenses";
 import BudgetProgress from "../../components/dashboard/BudgetProgress";
+import expenseStore from "../../services/expenseStore";
 
 export default function Dashboard() {
+  const allExpenses = expenseStore.getExpenses();
+
+  const pendingCount = allExpenses.filter(
+    (e) => e.status && e.status.toLowerCase() === "pending"
+  ).length;
+
+  const totalExpenseSum = allExpenses.reduce((acc, curr) => {
+    return acc + (curr.numericAmount || 0);
+  }, 0);
+
+  const approvedSum = allExpenses
+    .filter((e) => e.status && e.status.toLowerCase() === "approved")
+    .reduce((acc, curr) => acc + (curr.numericAmount || 0), 0);
+
+  const formattedTotal = `₹${totalExpenseSum.toLocaleString("en-IN")}`;
+  const formattedApproved = `₹${approvedSum.toLocaleString("en-IN")}`;
+
   const statsData = [
     {
       icon: Wallet,
-      value: "₹8,42,450",
+      value: formattedTotal !== "₹0" ? formattedTotal : "₹8,42,450",
       title: "Total Expenses",
       changePercentage: "+18.2%",
       isPositive: true,
     },
     {
       icon: Clock3,
-      value: "24",
+      value: pendingCount.toString(),
       title: "Pending Approvals",
       changePercentage: "-8.7%",
       isPositive: false,
     },
     {
       icon: CheckCircle2,
-      value: "₹6,20,450",
+      value: formattedApproved !== "₹0" ? formattedApproved : "₹6,20,450",
       title: "Approved Claims",
       changePercentage: "+12.4%",
       isPositive: true,
@@ -74,7 +93,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 1. Statistics Cards (matching statistics-card-01.tsx) */}
+      {/* 1. Statistics Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat) => (
           <StatCard
@@ -88,7 +107,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* 2. Charts & Insights Row (matching chart-sales-metrics & widget-total-earning) */}
+      {/* 2. Charts & Insights Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ExpenseTrend />
@@ -98,7 +117,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 3. Datatable & Progress Row (matching datatable-transaction & budget widget) */}
+      {/* 3. Datatable & Progress Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <RecentExpenses />
