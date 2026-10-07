@@ -101,7 +101,8 @@ export const AuthProvider = ({ children }) => {
         if (
           errMsg.toLowerCase().includes('bad credentials') ||
           errMsg.toLowerCase().includes('invalid') ||
-          errMsg.toLowerCase().includes('not found')
+          errMsg.toLowerCase().includes('not found') ||
+          errMsg.toLowerCase().includes('unauthorized')
         ) {
           throw 'Invalid email or password. Please verify your credentials.';
         }
@@ -117,7 +118,7 @@ export const AuthProvider = ({ children }) => {
 
       if (dbErr) {
         console.error('Supabase query error:', dbErr);
-        throw 'Database error connecting to Supabase.';
+        throw dbErr.message || 'Database error connecting to Supabase.';
       }
 
       // STRICT CHECK: User MUST exist in Supabase

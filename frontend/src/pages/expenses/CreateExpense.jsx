@@ -30,7 +30,7 @@ import expenseService from '../../services/expenseService';
 import expenseStore from '../../services/expenseStore';
 import { useAuth } from '../../context/AuthContext';
 import { processReceiptImage, formatFileSize } from '../../utils/imageUtils';
-import { uploadReceiptToSupabase } from '../../services/supabaseStorage';
+import { uploadReceiptToSupabase, supabase } from '../../services/supabaseStorage';
 
 export const CreateExpense = () => {
   const navigate = useNavigate();
@@ -190,26 +190,86 @@ export const CreateExpense = () => {
         }
       }
 
-      await expenseService.createExpense(
-        {
+      const numAmount = parseFloat(formData.amount) || 0;
+      const claimantEmail = user?.email || 'employee@company.com';
+      const expenseTitle = formData.title || formData.merchant || 'Expense Claim';
+
+      // 1. Direct Supabase insert (ensures immediate persistence and Supabase status tracking)
+      let createdDbId = null;
+      try {
+        const { data: insertedExpense, error: insertErr } = await supabase
+          .from('expenses')
+          .insert({
+            title: expenseTitle,
+            description: formData.description || '',
+            amount: numAmount,
+            category: formData.category || 'General',
+            department: user?.department || formData.department || 'Engineering',
+            submitted_by: claimantEmail,
+            status: 'PENDING',
+            currency: formData.currency || 'INR',
+            date: formData.date || new Date().toISOString().split('T')[0],
+            receipt_url: finalReceiptUrl,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (insertErr) {
+          console.warn('Supabase expense insert warning:', insertErr);
+        } else if (insertedExpense?.id) {
+          createdDbId = insertedExpense.id;
+        }
+      } catch (dbErr) {
+        console.warn('Supabase expense insert error:', dbErr);
+      }
+
+      // 2. Also notify Spring Boot backend if server is reachable
+      try {
+        await expenseService.createExpense(
+          {
+            ...formData,
+            title: expenseTitle,
+            submittedBy: claimantEmail,
+            id: createdDbId || existingDraftId || undefined,
+            status: 'PENDING',
+            numericAmount: numAmount,
+            amount: numAmount,
+            receiptAttached: !!proofData,
+            proofImage: finalReceiptUrl,
+            receiptUrl: finalReceiptUrl,
+            receiptName: proofData?.name || null,
+            receiptSize: proofData?.size || 0,
+          },
+          user
+        );
+      } catch (apiErr) {
+        console.warn('Backend API createExpense offline/skipped:', apiErr);
+      }
+
+      // 3. Keep local store synchronized
+      try {
+        expenseStore.addExpense({
           ...formData,
-          title: formData.title || formData.merchant || 'Expense Claim',
-          submittedBy: user?.email || user?.name || 'Employee',
-          id: existingDraftId || undefined,
-          status: 'PENDING',
-          numericAmount: parseFloat(formData.amount) || 0,
-          amount: parseFloat(formData.amount) || 0,
+          id: createdDbId ? `EXP-${createdDbId}` : (existingDraftId || `EXP-${Date.now()}`),
+          dbId: createdDbId,
+          title: expenseTitle,
+          submittedBy: claimantEmail,
+          status: 'Pending',
+          amount: numAmount,
           receiptAttached: !!proofData,
-          proofImage: finalReceiptUrl,
           receiptUrl: finalReceiptUrl,
-          receiptName: proofData?.name || null,
-          receiptSize: proofData?.size || 0,
-        },
-        user
-      );
+          proofImage: finalReceiptUrl,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (storeErr) {
+        console.warn('expenseStore error:', storeErr);
+      }
+
       navigate('/expenses');
     } catch (err) {
-      console.warn('API error, saved via local store fallback:', err);
+      console.warn('Submission fallback completed:', err);
       navigate('/expenses');
     } finally {
       setSubmitting(false);

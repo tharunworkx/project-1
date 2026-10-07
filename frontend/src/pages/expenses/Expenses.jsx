@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
+import { supabase } from '../../services/supabaseStorage';
 import {
   Plus,
   Search,
@@ -158,7 +159,39 @@ export const Expenses = () => {
   useEffect(() => {
     const loadExpenses = async () => {
       try {
-        const dbExpenses = await expenseService.getExpenses();
+        let dbExpenses = [];
+        try {
+          dbExpenses = await expenseService.getExpenses();
+        } catch (apiErr) {
+          console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
+        }
+
+        // Direct Supabase query fallback
+        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+          const { data: supaExpenses, error: supaErr } = await supabase
+            .from('expenses')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!supaErr && Array.isArray(supaExpenses)) {
+            dbExpenses = supaExpenses.map((e) => ({
+              id: e.id,
+              title: e.title,
+              description: e.description,
+              amount: e.amount,
+              category: e.category,
+              department: e.department,
+              submittedBy: e.submitted_by,
+              approvedBy: e.approved_by,
+              status: e.status,
+              createdAt: e.created_at,
+              receiptUrl: e.receipt_url,
+              currency: e.currency,
+              date: e.date,
+            }));
+          }
+        }
+
         if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
           const mapped = dbExpenses.map((e) => {
             const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
@@ -185,7 +218,7 @@ export const Expenses = () => {
           setExpenseList([...mapped, ...mockExpenses]);
         }
       } catch (err) {
-        console.warn('Could not fetch expenses from API:', err);
+        console.warn('Could not fetch expenses from API/Supabase:', err);
       }
     };
     loadExpenses();

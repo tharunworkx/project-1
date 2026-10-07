@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
+import { supabase } from '../../services/supabaseStorage';
+import { useAuth } from '../../context/AuthContext';
+import expenseStore from '../../services/expenseStore';
 import {
   Check,
   X,
@@ -142,6 +145,7 @@ function StatusBadge({ status }) {
 
 export const ApprovalQueue = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState(pendingApprovalsData);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -150,7 +154,37 @@ export const ApprovalQueue = () => {
   useEffect(() => {
     const loadPendingApprovals = async () => {
       try {
-        const dbExpenses = await expenseService.getExpenses({ status: 'PENDING' });
+        let dbExpenses = [];
+        try {
+          dbExpenses = await expenseService.getExpenses({ status: 'PENDING' });
+        } catch (apiErr) {
+          console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
+        }
+
+        // Direct Supabase query fallback
+        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+          const { data: supaExpenses, error: supaErr } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('status', 'PENDING')
+            .order('created_at', { ascending: false });
+
+          if (!supaErr && Array.isArray(supaExpenses)) {
+            dbExpenses = supaExpenses.map((e) => ({
+              id: e.id,
+              title: e.title,
+              description: e.description,
+              amount: e.amount,
+              category: e.category,
+              department: e.department,
+              submittedBy: e.submitted_by,
+              status: e.status,
+              createdAt: e.created_at,
+              receiptUrl: e.receipt_url,
+            }));
+          }
+        }
+
         if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
           const pendingFromDb = dbExpenses
             .filter((e) => (e.status || '').toUpperCase() === 'PENDING')
@@ -181,7 +215,7 @@ export const ApprovalQueue = () => {
           setItems([...pendingFromDb, ...pendingApprovalsData]);
         }
       } catch (err) {
-        console.warn('Could not load pending expenses from backend:', err);
+        console.warn('Could not load pending expenses from backend/Supabase:', err);
       }
     };
 
@@ -204,12 +238,30 @@ export const ApprovalQueue = () => {
 
   const handleApprove = async (id) => {
     const item = items.find((i) => i.id === id);
+    const approverName = user?.name || user?.email || 'Approver';
     if (item?.dbId) {
       try {
-        await expenseService.approveExpense(item.dbId);
+        await expenseService.approveExpense(item.dbId, { approver: approverName });
       } catch (err) {
-        console.error('Failed to approve in backend:', err);
+        console.warn('Backend approval skipped/offline:', err);
       }
+      try {
+        await supabase
+          .from('expenses')
+          .update({
+            status: 'APPROVED',
+            approved_by: approverName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.dbId);
+      } catch (dbErr) {
+        console.error('Supabase approval update error:', dbErr);
+      }
+    }
+    try {
+      expenseStore.updateExpenseStatus(id, 'Approved');
+    } catch (e) {
+      // ignore
     }
     setItems((prev) => prev.filter((item) => item.id !== id));
     setSelectedIds((prev) => prev.filter((i) => i !== id));
@@ -223,8 +275,24 @@ export const ApprovalQueue = () => {
       try {
         await expenseService.rejectExpense(item.dbId);
       } catch (err) {
-        console.error('Failed to reject in backend:', err);
+        console.warn('Backend reject skipped/offline:', err);
       }
+      try {
+        await supabase
+          .from('expenses')
+          .update({
+            status: 'REJECTED',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.dbId);
+      } catch (dbErr) {
+        console.error('Supabase reject update error:', dbErr);
+      }
+    }
+    try {
+      expenseStore.updateExpenseStatus(id, 'Rejected');
+    } catch (e) {
+      // ignore
     }
     setItems((prev) => prev.filter((item) => item.id !== id));
     setSelectedIds((prev) => prev.filter((i) => i !== id));
@@ -233,14 +301,32 @@ export const ApprovalQueue = () => {
   };
 
   const handleBatchApprove = async () => {
+    const approverName = user?.name || user?.email || 'Approver';
     for (const id of selectedIds) {
       const item = items.find((i) => i.id === id);
       if (item?.dbId) {
         try {
-          await expenseService.approveExpense(item.dbId);
+          await expenseService.approveExpense(item.dbId, { approver: approverName });
         } catch (err) {
-          console.error('Failed to batch approve in backend:', err);
+          console.warn('Backend batch approve skipped/offline:', err);
         }
+        try {
+          await supabase
+            .from('expenses')
+            .update({
+              status: 'APPROVED',
+              approved_by: approverName,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.dbId);
+        } catch (dbErr) {
+          console.error('Supabase batch approval error:', dbErr);
+        }
+      }
+      try {
+        expenseStore.updateExpenseStatus(id, 'Approved');
+      } catch (e) {
+        // ignore
       }
     }
     setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));

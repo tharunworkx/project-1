@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
+import { supabase } from '../../services/supabaseStorage';
 import {
   Receipt,
   Search,
@@ -79,7 +80,36 @@ export default function Receipts() {
   useEffect(() => {
     const fetchLiveReceipts = async () => {
       try {
-        const dbExpenses = await expenseService.getExpenses();
+        let dbExpenses = [];
+        try {
+          dbExpenses = await expenseService.getExpenses();
+        } catch (apiErr) {
+          console.warn('Backend API getExpenses offline, querying Supabase for receipts:', apiErr);
+        }
+
+        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+          const { data: supaExpenses, error: supaErr } = await supabase
+            .from('expenses')
+            .select('*')
+            .not('receipt_url', 'is', null)
+            .order('created_at', { ascending: false });
+
+          if (!supaErr && Array.isArray(supaExpenses)) {
+            dbExpenses = supaExpenses.map((e) => ({
+              id: e.id,
+              title: e.title,
+              description: e.description,
+              amount: e.amount,
+              category: e.category,
+              department: e.department,
+              submittedBy: e.submitted_by,
+              status: e.status,
+              createdAt: e.created_at,
+              receiptUrl: e.receipt_url,
+            }));
+          }
+        }
+
         if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
           const liveItems = dbExpenses
             .filter((e) => !!(e.receiptUrl))

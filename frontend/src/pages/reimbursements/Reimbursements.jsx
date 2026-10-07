@@ -50,6 +50,7 @@ import { useFinanceRole } from '@/hooks/useFinanceRole';
 import { useToast } from '@/context/ToastContext';
 import reimbursementMockService from '@/services/mock/reimbursementMockService';
 import expenseService from '@/services/expenseService';
+import { supabase } from '@/services/supabaseStorage';
 import { formatCurrency, formatDate } from '@/lib/currency';
 import ReimbursementDetailsModal from '@/components/finance/reimbursements/ReimbursementDetailsModal';
 import ConfirmDialog from '@/components/finance/common/ConfirmDialog';
@@ -185,7 +186,38 @@ export const Reimbursements = () => {
       // Fetch real database expenses
       let dbClaims = [];
       try {
-        const dbExpenses = await expenseService.getExpenses();
+        let dbExpenses = [];
+        try {
+          dbExpenses = await expenseService.getExpenses();
+        } catch (apiErr) {
+          console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
+        }
+
+        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+          const { data: supaExpenses, error: supaErr } = await supabase
+            .from('expenses')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!supaErr && Array.isArray(supaExpenses)) {
+            dbExpenses = supaExpenses.map((e) => ({
+              id: e.id,
+              title: e.title,
+              description: e.description,
+              amount: e.amount,
+              category: e.category,
+              department: e.department,
+              submittedBy: e.submitted_by,
+              approvedBy: e.approved_by,
+              status: e.status,
+              createdAt: e.created_at,
+              updatedAt: e.updated_at,
+              receiptUrl: e.receipt_url,
+              currency: e.currency,
+            }));
+          }
+        }
+
         if (Array.isArray(dbExpenses)) {
           // Keep claims that are APPROVED, REIMBURSED, or PROCESSING
           const relevantDbExpenses = dbExpenses.filter((e) => {
@@ -420,7 +452,18 @@ export const Reimbursements = () => {
             try {
               await expenseService.reimburseExpense(claim.dbId, { referenceId: refId || generatedRef });
             } catch (err) {
-              console.error('Failed to reimburse in database:', err);
+              console.warn('Backend reimburse skipped/offline:', err);
+            }
+            try {
+              await supabase
+                .from('expenses')
+                .update({
+                  status: 'REIMBURSED',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', claim.dbId);
+            } catch (dbErr) {
+              console.error('Supabase reimburse update error:', dbErr);
             }
           }
           await reimbursementMockService.updateStatus(id, 'Reimbursed', {
@@ -500,7 +543,20 @@ export const Reimbursements = () => {
           try {
             await expenseService.batchReimburse(dbItems.map((i) => i.dbId));
           } catch (err) {
-            console.error('Failed to batch reimburse database claims:', err);
+            console.warn('Backend batch reimburse skipped/offline:', err);
+          }
+          for (const item of dbItems) {
+            try {
+              await supabase
+                .from('expenses')
+                .update({
+                  status: 'REIMBURSED',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', item.dbId);
+            } catch (dbErr) {
+              console.error('Supabase batch reimburse update error:', dbErr);
+            }
           }
         }
         await reimbursementMockService.batchUpdateStatus(selectedIds, newStatus, {
