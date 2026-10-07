@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import Modal from '../../components/common/Modal';
 import expenseStore from '../../services/expenseStore';
+import { CustomSelect } from "@/components/ui/select";
 
 function StatusBadge({ status }) {
   const s = status ? status.toLowerCase() : '';
@@ -230,17 +231,20 @@ export default function Receipts() {
             </div>
 
             {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded-full border border-border/80 bg-muted/50 px-3 text-xs text-foreground outline-none shadow-xs"
-            >
-              <option value="ALL">All Status</option>
-              <option value="PENDING">Pending Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="DRAFT">Drafts</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+            <div className="w-36">
+              <CustomSelect
+                value={statusFilter}
+                onValueChange={(val) => setStatusFilter(val)}
+                triggerClassName="h-8 rounded-full border border-border/80 bg-muted/50 px-3 text-xs text-foreground outline-none shadow-xs"
+                options={[
+                  { value: 'ALL', label: 'All Status' },
+                  { value: 'PENDING', label: 'Pending Review' },
+                  { value: 'APPROVED', label: 'Approved' },
+                  { value: 'DRAFT', label: 'Drafts' },
+                  { value: 'REJECTED', label: 'Rejected' },
+                ]}
+              />
+            </div>
 
             {/* Grid / Table Toggle */}
             <div className="flex items-center rounded-lg border border-border/80 p-0.5 bg-muted/40">

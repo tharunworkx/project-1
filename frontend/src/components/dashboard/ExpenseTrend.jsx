@@ -24,6 +24,7 @@ import {
   Receipt,
   ArrowUpRight
 } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 
 const chartData = [
   { month: "Jan", expenses: 42000, approved: 35000 },
@@ -68,6 +69,11 @@ const metrics = [
 
 export default function ExpenseTrend() {
   const [period, setPeriod] = React.useState("6M");
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  // In dark mode: white. In light mode: light black (soft charcoal #4b5563)
+  const expenseBarFill = isDark ? "#ffffff" : "#4b5563";
 
   return (
     <Card className="shadow-xs">
@@ -132,7 +138,7 @@ export default function ExpenseTrend() {
               <Bar
                 dataKey="expenses"
                 name="Total Expenses"
-                fill="var(--primary)"
+                fill={expenseBarFill}
                 radius={[4, 4, 0, 0]}
               />
               <Bar

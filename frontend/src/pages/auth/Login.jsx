@@ -39,6 +39,20 @@ export const Login = () => {
     }
   };
 
+  // Always enforce dark theme on the login page
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousTheme = localStorage.getItem('theme') || 'light';
+    root.classList.add('dark');
+
+    return () => {
+      // Restore user's previous preference when leaving the login screen
+      if (previousTheme === 'light') {
+        root.classList.remove('dark');
+      }
+    };
+  }, []);
+
   // Auto-detect department & role if user typed a saved email
   useEffect(() => {
     if (email && email.includes('@')) {
@@ -87,7 +101,7 @@ export const Login = () => {
     }
   };
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-black overflow-hidden select-none">
+    <div className="dark relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-black text-zinc-100 overflow-hidden select-none">
       {/* Background Animated Glowing Dots Pattern on Pure Black */}
       <DottedGlowBackground
         className="pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_90%)]"
@@ -104,21 +118,21 @@ export const Login = () => {
         speedScale={1}
       />
 
-      {/* Perfectly Compact & Clean Login Card with Department Selection */}
-      <div className="relative z-10 w-full max-w-[390px] sm:max-w-[410px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200/80 dark:border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
+      {/* Permanently Dark Themed Clean Login Card */}
+      <div className="relative z-10 w-full max-w-[390px] sm:max-w-[410px] bg-[#121214] text-zinc-100 rounded-xl shadow-2xl border border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
         {/* Title */}
         <div className="text-center mb-5">
-          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight">
             Welcome to ExpenseHub
           </h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-normal">
+          <p className="text-xs text-zinc-400 mt-1 font-normal">
             Sign in with your department and assigned role
           </p>
         </div>
 
         {/* Error notification */}
         {error && (
-          <div className="mb-3.5 flex items-center gap-2 p-2.5 text-xs rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300">
+          <div className="mb-3.5 flex items-center gap-2 p-2.5 text-xs rounded-lg bg-rose-950/40 border border-rose-900 text-rose-300">
             <AlertCircle className="size-3.5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -128,7 +142,7 @@ export const Login = () => {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full h-10 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-[0.99] text-zinc-800 dark:text-zinc-100 font-medium text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer"
+          className="w-full h-10 rounded-lg border border-zinc-800 bg-zinc-900/90 hover:bg-zinc-800 active:scale-[0.99] text-zinc-200 hover:text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all shadow-xs cursor-pointer"
         >
           <svg className="size-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -154,9 +168,9 @@ export const Login = () => {
         {/* Divider with "or" */}
         <div className="relative my-4 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+            <div className="w-full border-t border-zinc-800" />
           </div>
-          <div className="relative bg-white dark:bg-zinc-900 px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+          <div className="relative bg-[#121214] px-3 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
             or
           </div>
         </div>
@@ -165,7 +179,7 @@ export const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* Email field */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1">
+            <label className="block text-xs font-semibold text-zinc-200 mb-1">
               Email
             </label>
             <input
@@ -174,14 +188,14 @@ export const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Type your email"
-              className="w-full h-10 px-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-300 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
+              className="w-full h-10 px-3 rounded-lg border border-zinc-800 bg-zinc-900/90 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 focus:bg-zinc-900 transition-colors"
             />
           </div>
 
           {/* Password field with show/hide toggle */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+              <label className="text-xs font-semibold text-zinc-200">
                 Password
               </label>
               <a
@@ -190,7 +204,7 @@ export const Login = () => {
                   e.preventDefault();
                   alert('Please enter your account password, or sign in using Google.');
                 }}
-                className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 underline"
+                className="text-[11px] text-zinc-400 hover:text-zinc-200 underline"
               >
                 Trouble logging in?
               </a>
@@ -202,12 +216,12 @@ export const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full h-10 px-3 pr-9 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-300 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
+                className="w-full h-10 px-3 pr-9 rounded-lg border border-zinc-800 bg-zinc-900/90 text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500 focus:bg-zinc-900 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 cursor-pointer"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -219,7 +233,7 @@ export const Login = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* Department */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="login-dept">
+              <label className="block text-xs font-semibold text-zinc-200 mb-1" htmlFor="login-dept">
                 <span className="flex items-center gap-1">
                   <Building2 className="size-3.5 text-zinc-400" />
                   <span>Department</span>
@@ -230,7 +244,8 @@ export const Login = () => {
                 name="department"
                 value={department}
                 onChange={(e) => handleDepartmentChange(e.target.value)}
-                triggerClassName="h-10 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium"
+                triggerClassName="h-10 rounded-lg border border-zinc-800 bg-zinc-900/90 text-xs sm:text-sm text-zinc-100 font-medium hover:border-zinc-700"
+                contentClassName="bg-zinc-900 border-zinc-800 text-zinc-100"
                 options={[
                   { value: "Engineering & DevOps", label: "Engineering & DevOps" },
                   { value: "Finance & Accounts", label: "Finance & Accounts" },
@@ -244,7 +259,7 @@ export const Login = () => {
 
             {/* Role */}
             <div>
-              <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="login-role">
+              <label className="block text-xs font-semibold text-zinc-200 mb-1" htmlFor="login-role">
                 <span className="flex items-center gap-1">
                   <Shield className="size-3.5 text-zinc-400" />
                   <span>Role</span>
@@ -255,7 +270,8 @@ export const Login = () => {
                 name="role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                triggerClassName="h-10 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium"
+                triggerClassName="h-10 rounded-lg border border-zinc-800 bg-zinc-900/90 text-xs sm:text-sm text-zinc-100 font-medium hover:border-zinc-700"
+                contentClassName="bg-zinc-900 border-zinc-800 text-zinc-100"
                 options={[
                   { value: "Employee", label: "Employee" },
                   { value: "Manager", label: "Manager" },
@@ -273,11 +289,11 @@ export const Login = () => {
               id="remember"
               checked={rememberMe}
               onCheckedChange={setRememberMe}
-              className="rounded-[4px] data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900 dark:data-[state=checked]:bg-white dark:data-[state=checked]:border-white dark:data-[state=checked]:text-zinc-900"
+              className="rounded-[4px] border-zinc-700 bg-zinc-900 data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-zinc-950"
             />
             <label
               htmlFor="remember"
-              className="text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer select-none"
+              className="text-xs text-zinc-400 cursor-pointer select-none"
             >
               Remember this device for 30 days
             </label>
@@ -287,18 +303,18 @@ export const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-10 rounded-lg bg-[#1c1c1e] hover:bg-black active:scale-[0.99] text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-medium text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center cursor-pointer mt-1.5 disabled:opacity-60"
+            className="w-full h-10 rounded-lg bg-white hover:bg-zinc-200 active:scale-[0.99] text-zinc-950 font-semibold text-xs sm:text-sm transition-all shadow-xs flex items-center justify-center cursor-pointer mt-1.5 disabled:opacity-60"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         {/* Footer sign up link */}
         <div className="mt-4 text-center">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-zinc-400">
             Don't have an account?{' '}
             <Link
               to="/register"
-              className="font-semibold text-zinc-900 dark:text-zinc-100 underline hover:text-zinc-700"
+              className="font-semibold text-white underline hover:text-zinc-200"
             >
               Sign up
             </Link>

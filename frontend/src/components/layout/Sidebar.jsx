@@ -51,7 +51,7 @@ function CollapsibleNavItem({ item, location }) {
   const isAnyChildActive = item.childItems?.some(
     (sub) => location.pathname === sub.href
   );
-  const [isOpen, setIsOpen] = React.useState(isAnyChildActive);
+  const [isOpen, setIsOpen] = React.useState(true);
   const Icon = item.icon;
 
   React.useEffect(() => {
@@ -71,7 +71,7 @@ function CollapsibleNavItem({ item, location }) {
               isActive={isAnyChildActive}
               className={cn(
                 "size-9! p-0! justify-center! mx-auto! rounded-lg cursor-pointer transition-colors",
-                isAnyChildActive ? "bg-primary/10 text-primary font-semibold" : "hover:bg-sidebar-accent"
+                isAnyChildActive ? "bg-zinc-800 text-white font-semibold" : "hover:bg-zinc-800/60"
               )}
             >
               <Icon className="size-4.5 shrink-0" />
@@ -81,9 +81,9 @@ function CollapsibleNavItem({ item, location }) {
             side="right"
             align="start"
             sideOffset={12}
-            className="w-52 p-1.5 shadow-xl rounded-xl border border-border bg-popover text-popover-foreground animate-in fade-in zoom-in-95 duration-150 z-50"
+            className="w-52 p-1.5 shadow-xl rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-100 animate-in fade-in zoom-in-95 duration-150 z-50"
           >
-            <div className="px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="px-2.5 py-1.5 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
               {item.label}
             </div>
             <div className="space-y-0.5">
@@ -96,8 +96,8 @@ function CollapsibleNavItem({ item, location }) {
                       className={cn(
                         "flex items-center w-full px-2.5 py-1.5 text-xs rounded-lg transition-colors font-medium",
                         isSubActive
-                          ? "bg-primary/10 text-primary font-bold"
-                          : "text-foreground hover:bg-muted"
+                          ? "bg-zinc-800 text-white font-bold"
+                          : "text-zinc-300 hover:bg-zinc-800/60"
                       )}
                     >
                       {subItem.label}
@@ -112,23 +112,23 @@ function CollapsibleNavItem({ item, location }) {
     );
   }
 
-  // When sidebar is extended: inline accordion showing only logo on left when open
+  // When sidebar is extended: inline accordion matching reference Image 2
   return (
     <SidebarMenuItem className="w-full">
       {isOpen ? (
-        <div className="flex items-start gap-2.5 w-full">
+        <div className="flex items-start gap-2.5 w-full px-2 py-1">
           {/* Logo button on the left */}
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
-            title={`Collapse ${item.label}`}
-            className="size-9 rounded-lg p-0 flex items-center justify-center shrink-0 bg-sidebar-accent/80 text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+            onClick={() => setIsOpen(!isOpen)}
+            title={`Toggle ${item.label}`}
+            className="size-9 rounded-lg p-0 flex items-center justify-center shrink-0 bg-zinc-200 text-zinc-800 hover:bg-zinc-300/80 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
           >
             <Icon className="size-4.5" />
           </button>
 
           {/* Subitems list with vertical divider line */}
-          <div className="border-l border-sidebar-border pl-2 flex flex-col gap-1 flex-1 min-w-0">
+          <div className="border-l border-zinc-200 dark:border-zinc-800 pl-3 flex flex-col gap-1.5 flex-1 min-w-0">
             {item.childItems.map((subItem) => {
               const isSubActive = location.pathname === subItem.href;
               return (
@@ -136,10 +136,10 @@ function CollapsibleNavItem({ item, location }) {
                   key={subItem.label}
                   to={subItem.href}
                   className={cn(
-                    "block px-3 py-1.5 rounded-lg text-xs transition-colors",
+                    "block py-1 text-xs transition-colors truncate",
                     isSubActive
-                      ? "bg-muted font-bold text-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50 font-medium"
+                      ? "text-blue-600 font-semibold dark:text-blue-400"
+                      : "text-zinc-600 hover:text-zinc-950 font-normal dark:text-zinc-400 dark:hover:text-zinc-200"
                   )}
                 >
                   {subItem.label}
@@ -149,18 +149,18 @@ function CollapsibleNavItem({ item, location }) {
           </div>
         </div>
       ) : (
-        /* Closed state: Full pill button matching reference */
+        /* Closed state: Full pill button matching reference Image 1 */
         <SidebarMenuButton
           tooltip={item.label}
           isActive={isAnyChildActive}
           onClick={() => setIsOpen(true)}
-          className="w-full justify-between font-medium cursor-pointer"
+          className="w-full justify-between font-medium cursor-pointer h-10 rounded-xl px-3 hover:bg-zinc-200/60 text-zinc-800 hover:text-zinc-950 dark:hover:bg-zinc-800/60 dark:text-zinc-300 dark:hover:text-white"
         >
           <div className="flex items-center gap-2">
             <Icon className="size-4.5 shrink-0" />
             <span>{item.label}</span>
           </div>
-          <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+          <ChevronRight className="ml-auto size-4 text-zinc-500 dark:text-zinc-400" />
         </SidebarMenuButton>
       )}
     </SidebarMenuItem>
@@ -340,28 +340,33 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
-      {/* 1. Header: Fixed-origin minimize button anchored to side with dynamic theme background & action icon */}
-      <SidebarHeader className="h-16 border-b border-sidebar-border p-0 flex flex-row items-center justify-start overflow-hidden">
-        <div className="w-12 h-16 flex items-center justify-center shrink-0">
+      {/* 1. Header: Toggle button matching Image 1 (black in light) & Image 2 (white in dark) */}
+      <SidebarHeader className="p-3 pb-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-2.5 group-data-[collapsible=icon]:h-14 border-none flex flex-row items-center justify-start group-data-[collapsible=icon]:justify-center overflow-hidden">
+        <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full shrink-0">
           <button
             type="button"
             onClick={toggleSidebar}
             title={open ? "Collapse sidebar" : "Expand sidebar"}
-            className="size-9 rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs flex items-center justify-center transition-colors cursor-pointer"
+            className="size-9 rounded-xl bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-black dark:hover:bg-zinc-100 dark:border-white shadow-xs flex items-center justify-center transition-colors cursor-pointer group-data-[collapsible=icon]:mx-auto"
           >
             {open ? (
-              <PanelLeftClose className="size-4.5 stroke-[2.2]" />
+              <PanelLeftClose className="size-4.5 stroke-[2]" />
             ) : (
-              <PanelLeftOpen className="size-4.5 stroke-[2.2]" />
+              <PanelLeftOpen className="size-4.5 stroke-[2]" />
             )}
           </button>
         </div>
       </SidebarHeader>
 
       {/* 2. Menu Navigation without group title words */}
-      <SidebarContent className="px-2 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2">
+      <SidebarContent
+        onWheel={(e) => {
+          e.currentTarget.scrollTop += e.deltaY;
+        }}
+        className="px-2 py-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2 pb-20"
+      >
         {filteredNavGroups.map((group, groupIdx) => (
-          <SidebarGroup key={group.groupLabel || groupIdx} className="py-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:my-0.5">
+          <SidebarGroup key={group.groupLabel || groupIdx} className="py-0.5 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:my-0.5">
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
@@ -388,17 +393,19 @@ export function AppSidebar({ ...props }) {
                         tooltip={item.label}
                         isActive={isActive}
                         className={cn(
-                          isActive ? "bg-primary/10 text-primary font-semibold" : "hover:bg-sidebar-accent",
-                          "group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto!"
+                          isActive
+                            ? "bg-zinc-200 text-zinc-900 font-semibold shadow-xs dark:bg-zinc-800 dark:text-white"
+                            : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-200/60 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50",
+                          "h-10 rounded-xl px-3 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto!"
                         )}
                       >
                         <NavLink to={item.href} className="flex items-center justify-start group-data-[collapsible=icon]:justify-center size-full">
                           <Icon className="size-4.5 shrink-0" />
                           <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
                           {item.badge && (
-                            <SidebarMenuBadge className="bg-primary/10 text-primary rounded-full px-1.5 text-xs font-semibold ml-auto group-data-[collapsible=icon]:hidden">
+                            <span className="size-5 rounded-full bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 text-[11px] font-semibold flex items-center justify-center ml-auto group-data-[collapsible=icon]:hidden">
                               {item.badge}
-                            </SidebarMenuBadge>
+                            </span>
                           )}
                         </NavLink>
                       </SidebarMenuButton>

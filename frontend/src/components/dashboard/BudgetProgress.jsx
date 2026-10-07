@@ -77,7 +77,13 @@ export default function BudgetProgress() {
               <Progress
                 value={budget.percentage}
                 className="h-2"
-                indicatorClassName={isHigh ? "bg-destructive" : "bg-primary"}
+                indicatorClassName={
+                  budget.percentage >= 80
+                    ? "bg-rose-500"
+                    : budget.percentage >= 60
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+                }
               />
             </div>
           );

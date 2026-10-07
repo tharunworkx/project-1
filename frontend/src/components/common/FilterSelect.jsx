@@ -42,7 +42,7 @@ export const FilterSelect = ({
           variant="outline"
           className={cn(
             widthClass,
-            "h-8 px-2.5 rounded-md border border-border/80 bg-muted/40 hover:bg-muted/70 text-xs text-foreground flex items-center justify-between font-normal cursor-pointer focus-visible:ring-1 focus-visible:ring-ring transition-colors",
+            "h-8 px-2.5 rounded-lg border border-border/80 bg-muted/40 hover:bg-muted/70 text-xs text-foreground flex items-center justify-between font-normal cursor-pointer focus-visible:ring-1 focus-visible:ring-ring transition-colors shadow-2xs",
             buttonClassName,
             className
           )}
@@ -56,7 +56,7 @@ export const FilterSelect = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-44 max-h-64 overflow-y-auto p-1 shadow-xl bg-popover border border-border text-popover-foreground rounded-lg z-50"
+        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-44 max-h-64 overflow-y-auto p-1.5 shadow-xl bg-popover border border-border/80 text-popover-foreground rounded-xl z-50 backdrop-blur-md"
       >
         {normalizedOptions.map((opt) => {
           const isSelected = String(opt.value) === String(value);
@@ -65,7 +65,7 @@ export const FilterSelect = ({
               key={String(opt.value)}
               onClick={() => onChange(opt.value)}
               className={cn(
-                "text-xs cursor-pointer px-2.5 py-1.5 rounded-md flex items-center justify-between transition-colors",
+                "text-xs cursor-pointer px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors",
                 isSelected
                   ? "bg-primary/10 text-primary font-medium"
                   : "text-foreground hover:bg-muted focus:bg-muted"
