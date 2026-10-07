@@ -25,14 +25,26 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Modal from '../../components/common/Modal';
 import expenseStore from '../../services/expenseStore';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabaseStorage';
+import expenseService from '../../services/expenseService';
 
 export const ExpenseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [proofModalOpen, setProofModalOpen] = useState(false);
   const [notification, setNotification] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Role check: Only Manager, Finance Executive, CFO, and Admin can approve or reject!
+  const roleLower = (user?.role || 'employee').toLowerCase();
+  const isAdmin = roleLower === 'admin';
+  const isManager = roleLower.includes('manager') || roleLower.includes('cfo') || isAdmin;
+  const isFinance = roleLower.includes('finance') || isAdmin;
+  const canApproveOrReject = isManager || isFinance || isAdmin;
 
   // Load expense from store
   const [expense, setExpense] = useState(() => {
@@ -40,13 +52,127 @@ export const ExpenseDetails = () => {
   });
 
   useEffect(() => {
-    if (id) {
-      const data = expenseStore.getExpenseById(id);
-      if (data) {
-        setExpense(data);
+    let isMounted = true;
+    const fetchExpense = async () => {
+      if (!id) return;
+      setLoading(true);
+
+      // 1. Check local store first
+      const local = expenseStore.getExpenseById(id);
+      if (local && isMounted) {
+        setExpense(local);
       }
-    }
+
+      // 2. Fetch live from Supabase / Backend database
+      const cleanId = id.replace(/^(EXP-|RMB-DB-)/, '');
+      try {
+        let dbData = null;
+
+        // Try backend API first if online
+        try {
+          dbData = await expenseService.getExpenseById(cleanId);
+        } catch (apiErr) {
+          // Fall back to Supabase
+        }
+
+        // If not found in backend, query Supabase directly
+        if (!dbData) {
+          const { data: supaData, error: supaErr } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('id', cleanId)
+            .maybeSingle();
+
+          if (!supaErr && supaData) {
+            dbData = supaData;
+          }
+        }
+
+        if (dbData && isMounted) {
+          const claimantName = (dbData.submitted_by || dbData.submittedBy)?.includes('@')
+            ? (dbData.submitted_by || dbData.submittedBy).split('@')[0]
+            : (dbData.submitted_by || dbData.submittedBy || 'Employee');
+          const rawAmount = Number(dbData.amount) || 0;
+          const formattedAmount = `₹${rawAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          const rawDate = dbData.date || (dbData.created_at || dbData.createdAt ? new Date(dbData.created_at || dbData.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today');
+          const rawStatus = dbData.status ? (dbData.status.charAt(0).toUpperCase() + dbData.status.slice(1).toLowerCase()) : 'Pending';
+          const receiptUrl = dbData.receipt_url || dbData.receiptUrl;
+
+          setExpense({
+            id: `EXP-${dbData.id}`,
+            dbId: dbData.id,
+            merchant: dbData.title || dbData.merchant || 'Corporate Vendor',
+            title: dbData.description || dbData.title || 'Expense Claim',
+            description: dbData.description || '',
+            amount: formattedAmount,
+            numericAmount: rawAmount,
+            category: dbData.category || 'General',
+            claimant: claimantName,
+            email: dbData.submitted_by || dbData.submittedBy || 'employee@company.com',
+            department: dbData.department || 'Engineering',
+            paymentMode: 'Direct Reimbursement',
+            date: rawDate,
+            status: rawStatus,
+            receiptUrl: receiptUrl,
+            proofImage: receiptUrl,
+            receiptName: receiptUrl ? `receipt_${dbData.id}.jpg` : null,
+            receiptAttached: !!receiptUrl,
+            approvedBy: dbData.approved_by || dbData.approvedBy,
+            auditHistory: [
+              {
+                step: 'Claim Submitted',
+                actor: claimantName,
+                role: 'Claimant',
+                date: rawDate,
+                status: 'Submitted',
+                note: 'Expense filed for reimbursement verification.'
+              },
+              ...(dbData.status === 'APPROVED' ? [{
+                step: 'Manager Approval Granted',
+                actor: dbData.approved_by || dbData.approvedBy || 'Manager',
+                role: 'Approver',
+                date: 'Recently',
+                status: 'Approved',
+                note: 'Claim audited and verified for settlement.'
+              }] : []),
+              ...(dbData.status === 'REJECTED' ? [{
+                step: 'Claim Rejected',
+                actor: dbData.approved_by || dbData.approvedBy || 'Manager',
+                role: 'Approver',
+                date: 'Recently',
+                status: 'Rejected',
+                note: 'Claim rejected during audit review.'
+              }] : []),
+              ...(dbData.status === 'REIMBURSED' ? [{
+                step: 'Funds Disbursed',
+                actor: 'Finance Department',
+                role: 'Disbursement Executive',
+                date: 'Recently',
+                status: 'Settled',
+                note: 'Disbursement transaction processed via bank transfer.'
+              }] : [])
+            ]
+          });
+        }
+      } catch (err) {
+        console.warn('Could not fetch expense details from Supabase:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchExpense();
+    return () => { isMounted = false; };
   }, [id]);
+
+  if (loading && !expense) {
+    return (
+      <div className="card text-center py-16">
+        <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-xs text-muted-foreground">Loading expense claim details from Supabase...</p>
+      </div>
+    );
+  }
 
   if (!expense) {
     return (
@@ -67,18 +193,68 @@ export const ExpenseDetails = () => {
 
   const proofImg = expense.proofImage || expense.receiptUrl;
 
-  const handleApprove = () => {
-    const updated = expenseStore.updateStatus(expense.id, 'Approved');
-    const fresh = updated.find((e) => e.id === expense.id);
-    setExpense(fresh || { ...expense, status: 'Approved' });
+  const handleApprove = async () => {
+    if (!canApproveOrReject) {
+      alert('Only Managers and Finance Executives have permission to approve expenses.');
+      return;
+    }
+    const cleanId = expense.dbId || expense.id?.replace(/^(EXP-|RMB-DB-)/, '');
+    const approverName = user?.name || user?.email || 'Approver';
+    if (cleanId) {
+      try {
+        await expenseService.approveExpense(cleanId, { approver: approverName });
+      } catch (e) {
+        console.warn('Backend approve offline:', e);
+      }
+      try {
+        await supabase
+          .from('expenses')
+          .update({
+            status: 'APPROVED',
+            approved_by: approverName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', cleanId);
+      } catch (dbErr) {
+        console.error('Supabase approve error:', dbErr);
+      }
+    }
+    try {
+      expenseStore.updateStatus(expense.id, 'Approved');
+    } catch (e) {}
+    setExpense((prev) => ({ ...prev, status: 'Approved', approvedBy: approverName }));
     setNotification('Expense claim approved successfully!');
     setTimeout(() => setNotification(''), 4000);
   };
 
-  const handleConfirmReject = () => {
-    const updated = expenseStore.updateStatus(expense.id, 'Rejected', rejectReason);
-    const fresh = updated.find((e) => e.id === expense.id);
-    setExpense(fresh || { ...expense, status: 'Rejected' });
+  const handleConfirmReject = async () => {
+    if (!canApproveOrReject) {
+      alert('Only Managers and Finance Executives have permission to reject expenses.');
+      return;
+    }
+    const cleanId = expense.dbId || expense.id?.replace(/^(EXP-|RMB-DB-)/, '');
+    if (cleanId) {
+      try {
+        await expenseService.rejectExpense(cleanId, { reason: rejectReason });
+      } catch (e) {
+        console.warn('Backend reject offline:', e);
+      }
+      try {
+        await supabase
+          .from('expenses')
+          .update({
+            status: 'REJECTED',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', cleanId);
+      } catch (dbErr) {
+        console.error('Supabase reject error:', dbErr);
+      }
+    }
+    try {
+      expenseStore.updateStatus(expense.id, 'Rejected', rejectReason);
+    } catch (e) {}
+    setExpense((prev) => ({ ...prev, status: 'Rejected' }));
     setRejectModalOpen(false);
     setNotification('Expense claim rejected.');
     setTimeout(() => setNotification(''), 4000);
@@ -178,7 +354,7 @@ export const ExpenseDetails = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {isPending && (
+          {isPending && canApproveOrReject && (
             <>
               <Button
                 variant="destructive"
@@ -198,6 +374,13 @@ export const ExpenseDetails = () => {
                 <span>Approve Claim</span>
               </Button>
             </>
+          )}
+
+          {isPending && !canApproveOrReject && (
+            <span className="text-xs text-muted-foreground italic flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-border/60">
+              <Clock className="size-3.5 text-amber-500" />
+              <span>Awaiting Manager / Finance Sign-off</span>
+            </span>
           )}
 
           {isDraft && (

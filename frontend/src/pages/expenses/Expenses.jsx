@@ -310,21 +310,25 @@ export const Expenses = () => {
                 <TableHead>DATE</TableHead>
                 <TableHead>PAYMENT MODE</TableHead>
                 <TableHead>STATUS</TableHead>
-                <TableHead>AMOUNT</TableHead>
-                <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
+                <TableHead className="pr-6">AMOUNT</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     <p className="font-semibold text-foreground">No matching expenses found</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Try clearing filters or search term</p>
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow
+                    key={row.id}
+                    onClick={() => navigate(`/expenses/${row.id}`)}
+                    className="cursor-pointer hover:bg-muted/60 transition-colors group"
+                    title="Click row to view expense details"
+                  >
                     <TableCell className="pl-6">
                       <div className="flex items-center gap-2.5">
                         <Avatar className="size-8.5 rounded-full border border-border/60">
@@ -333,7 +337,7 @@ export const Expenses = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col text-left leading-tight">
-                          <span className="text-xs font-semibold text-foreground">{row.claimant}</span>
+                          <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{row.claimant}</span>
                           <span className="text-[11px] text-muted-foreground">{row.email}</span>
                         </div>
                       </div>
@@ -353,27 +357,8 @@ export const Expenses = () => {
                     <TableCell>
                       <StatusBadge status={row.status} />
                     </TableCell>
-                    <TableCell className="text-xs font-bold text-foreground">
+                    <TableCell className="pr-6 text-xs font-bold text-foreground font-mono">
                       {row.amount}
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-foreground">
-                            <EllipsisVertical className="size-4" />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/expenses/${row.id}`)}
-                            className="cursor-pointer flex items-center gap-2"
-                          >
-                            <Eye className="size-4" />
-                            <span>View Details</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

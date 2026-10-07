@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -150,6 +151,13 @@ export const ApprovalQueue = () => {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [notification, setNotification] = useState('');
+
+  // Role check: Only Managers, Finance, and Admins can access Approval Queue!
+  const roleLower = (user?.role || 'employee').toLowerCase();
+  const isAdmin = roleLower === 'admin';
+  const isManager = roleLower.includes('manager') || roleLower.includes('cfo') || isAdmin;
+  const isFinance = roleLower.includes('finance') || isAdmin;
+  const canAccessApprovals = isManager || isFinance || isAdmin;
 
   useEffect(() => {
     const loadPendingApprovals = async () => {
@@ -342,6 +350,21 @@ export const ApprovalQueue = () => {
       item.merchant.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (!canAccessApprovals) {
+    return (
+      <div className="card text-center py-16 space-y-4 max-w-lg mx-auto">
+        <ShieldAlert className="size-12 text-rose-500 mx-auto" />
+        <h2 className="text-xl font-bold text-foreground">Access Restricted</h2>
+        <p className="text-xs text-muted-foreground">
+          The Approval Queue is strictly restricted to Managers, Finance Executives, and Administrators. Standard Employees cannot review, approve, or reject expense claims.
+        </p>
+        <Button onClick={() => navigate('/expenses')} size="sm">
+          Return to My Expenses
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Notification Toast */}
@@ -421,8 +444,13 @@ export const ApprovalQueue = () => {
                 filtered.map((row) => {
                   const isChecked = selectedIds.includes(row.id);
                   return (
-                    <TableRow key={row.id} className={isChecked ? "bg-muted/40" : ""}>
-                      <TableCell className="pl-6">
+                    <TableRow
+                      key={row.id}
+                      onClick={() => navigate(`/expenses/${row.id}`)}
+                      className={`cursor-pointer hover:bg-muted/60 transition-colors ${isChecked ? "bg-muted/40" : ""}`}
+                      title="Click row to view full claim details"
+                    >
+                      <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => toggleSelect(row.id)}
@@ -465,7 +493,7 @@ export const ApprovalQueue = () => {
                       <TableCell className="text-xs font-bold text-foreground">
                         {row.amount}
                       </TableCell>
-                      <TableCell className="pr-6 text-right">
+                      <TableCell className="pr-6 text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-foreground">
