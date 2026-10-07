@@ -1,54 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import bcrypt from 'bcryptjs';
 import authService from '../services/authService';
+import { supabase } from '../services/supabaseStorage';
 
 const AuthContext = createContext(null);
-
-const DEFAULT_DEMO_USER = null;
-
-const INITIAL_REGISTERED_USERS = [];
-
-const getRegisteredUsers = () => {
-  try {
-    const stored = localStorage.getItem('registered_users');
-    if (!stored) return [];
-    const parsed = JSON.parse(stored);
-    const exampleEmails = [
-      'alex.morgan@company.com',
-      'karthik.m@company.com',
-      'anita.d@company.com',
-      'priya.s@company.com',
-      'arun.kumar@company.com',
-      'alex.m@company.com',
-      'rahul.s@company.com',
-      'sarah.j@company.com',
-      'divya.r@company.com'
-    ];
-    const filtered = parsed.filter((u) => !exampleEmails.includes(u.email?.toLowerCase()));
-    if (filtered.length !== parsed.length) {
-      localStorage.setItem('registered_users', JSON.stringify(filtered));
-    }
-    return filtered;
-  } catch {
-    return [];
-  }
-};
-
-const saveRegisteredUser = (userRecord) => {
-  try {
-    const users = getRegisteredUsers();
-    const index = users.findIndex(
-      (u) => u.email?.toLowerCase() === userRecord.email?.toLowerCase()
-    );
-    if (index >= 0) {
-      users[index] = { ...users[index], ...userRecord };
-    } else {
-      users.push(userRecord);
-    }
-    localStorage.setItem('registered_users', JSON.stringify(users));
-  } catch (err) {
-    console.error('Failed to save registered user:', err);
-  }
-};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -63,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(false);
 
+  // Sync session state to localStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
@@ -79,115 +35,161 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const login = async (email, password, roleOrOptions = null, maybeDept = null) => {
-    setLoading(true);
-    let roleOverride = null;
-    let departmentOverride = null;
+  // Clean stale mock stores and continuously verify that active user STILL exists in Supabase
+  useEffect(() => {
+    localStorage.removeItem('registered_users');
 
-    if (roleOrOptions && typeof roleOrOptions === 'object') {
-      roleOverride = roleOrOptions.role;
-      departmentOverride = roleOrOptions.department;
-    } else {
-      roleOverride = roleOrOptions;
-      departmentOverride = maybeDept;
+    const verifyUserStillExistsInSupabase = async () => {
+      if (!user?.email) return;
+      try {
+        const { data: dbUser, error } = await supabase
+          .from('users')
+          .select('id, email, role, department, first_name, last_name')
+          .eq('email', user.email.toLowerCase().trim())
+          .maybeSingle();
+
+        // If the user record was deleted from Supabase, immediately invalidate session
+        if (!error && !dbUser) {
+          console.warn('Session revoked: User account was deleted from Supabase.');
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+        } else if (dbUser) {
+          // Keep role & department strictly synchronized with Supabase
+          if (dbUser.role !== user.role || dbUser.department !== user.department) {
+            setUser((prev) => ({
+              ...prev,
+              role: dbUser.role || prev.role,
+              department: dbUser.department || prev.department,
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase existence check warning:', err);
+      }
+    };
+
+    verifyUserStillExistsInSupabase();
+  }, []);
+
+  /**
+   * Log in user strictly against Supabase
+   * If the user does not exist in Supabase (or was deleted), login is denied.
+   */
+  const login = async (email, password) => {
+    setLoading(true);
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
+    if (!normalizedEmail || !password) {
+      setLoading(false);
+      throw 'Please provide both email and password.';
     }
 
-    const normalizedEmail = (email || '').toLowerCase().trim();
     try {
-      // 1. Attempt backend API call first
+      // 1. Attempt Spring Boot backend login if server is running
       try {
         const data = await authService.login({ email: normalizedEmail, password });
         if (data?.user) {
-          const userWithOverrides = {
-            ...data.user,
-            role: data.user.role || roleOverride || 'Employee',
-            department: data.user.department || departmentOverride || 'Engineering & DevOps',
-          };
-          setUser(userWithOverrides);
+          setUser(data.user);
           setToken(data.token || `token_${Date.now()}`);
-          return userWithOverrides;
+          return data.user;
         }
       } catch (backendErr) {
-        console.warn('Backend unavailable, verifying locally:', backendErr);
-      }
-
-      // 2. Check local registered users store
-      const users = getRegisteredUsers();
-      const registered = users.find(
-        (u) => u.email?.toLowerCase() === normalizedEmail
-      );
-
-      if (registered) {
-        if (registered.password && registered.password !== password) {
-          throw 'Invalid login credentials';
+        const errMsg = typeof backendErr === 'string' ? backendErr : backendErr?.message || '';
+        // If backend explicitly rejected invalid credentials, fail immediately
+        if (
+          errMsg.toLowerCase().includes('bad credentials') ||
+          errMsg.toLowerCase().includes('invalid') ||
+          errMsg.toLowerCase().includes('not found')
+        ) {
+          throw 'Invalid email or password. Please verify your credentials.';
         }
-        const assignedRole = registered.role || roleOverride || 'Employee';
-        const assignedDept = registered.department || departmentOverride || 'Engineering & DevOps';
-
-        const sessionUser = {
-          id: registered.id || `usr_${Date.now()}`,
-          name: registered.name || 'User',
-          email: registered.email,
-          role: assignedRole,
-          department: assignedDept,
-          avatar: registered.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(registered.name || 'User')}`,
-        };
-
-        // Persist updated role & department selection
-        saveRegisteredUser({
-          ...registered,
-          role: assignedRole,
-          department: assignedDept,
-        });
-
-        setUser(sessionUser);
-        setToken(`session-token-${Date.now()}`);
-        return sessionUser;
+        // If backend is unreachable (e.g. on hosted Vercel site), fall through to Supabase query
       }
 
-      // 4. Fallback: dynamic session with chosen credentials, role & department
-      const dynamicUser = {
-        id: `usr_${Date.now()}`,
-        name: normalizedEmail.split('@')[0] || 'User',
-        email: normalizedEmail,
-        password: password,
-        role: roleOverride || 'Employee',
-        department: departmentOverride || 'Engineering & DevOps',
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(normalizedEmail)}`,
+      // 2. Query Supabase directly (ensures deleted users CANNOT log in)
+      const { data: dbUser, error: dbErr } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (dbErr) {
+        console.error('Supabase query error:', dbErr);
+        throw 'Database error connecting to Supabase.';
+      }
+
+      // STRICT CHECK: User MUST exist in Supabase
+      if (!dbUser) {
+        throw 'Account not found in Supabase. You must sign up first before logging in.';
+      }
+
+      // 3. Verify Password against BCrypt hash stored in Supabase
+      let isPasswordValid = false;
+      if (dbUser.password) {
+        if (dbUser.password.startsWith('$2')) {
+          try {
+            isPasswordValid = bcrypt.compareSync(password, dbUser.password);
+          } catch (e) {
+            console.error('BCrypt comparison error:', e);
+          }
+        } else {
+          isPasswordValid = (dbUser.password === password);
+        }
+      }
+
+      if (!isPasswordValid) {
+        throw 'Invalid password. Please check your credentials.';
+      }
+
+      // 4. Successful login: build real authenticated session from Supabase row
+      const fullName = `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim() || normalizedEmail.split('@')[0];
+      const sessionUser = {
+        id: dbUser.id,
+        name: fullName,
+        email: dbUser.email,
+        role: dbUser.role || 'Employee',
+        department: dbUser.department || 'Engineering',
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
       };
-      saveRegisteredUser(dynamicUser);
-      setUser(dynamicUser);
-      setToken(`session-token-${Date.now()}`);
-      return dynamicUser;
+
+      setUser(sessionUser);
+      setToken(`supabase_token_${dbUser.id}_${Date.now()}`);
+      return sessionUser;
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Register user directly into Supabase
+   */
   const register = async (userData) => {
     setLoading(true);
+    const email = (userData.email || '').toLowerCase().trim();
+
+    if (!email) {
+      setLoading(false);
+      throw 'Email is required to sign up.';
+    }
+    if (!userData.password) {
+      setLoading(false);
+      throw 'Password is required to sign up.';
+    }
+
+    const nameParts = (userData.name || '').trim().split(' ');
+    const firstName = nameParts[0] || 'User';
+    const lastName = nameParts.slice(1).join(' ') || 'Account';
+
     try {
-      const email = (userData.email || '').toLowerCase().trim();
-      const newUser = {
-        id: `usr_${Date.now()}`,
-        name: userData.name?.trim() || (email ? email.split('@')[0] : 'New User'),
-        email: email,
-        password: userData.password,
-        role: userData.role || 'Employee',
-        department: userData.department || 'Engineering',
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userData.name || 'User')}`,
-      };
-
-      // Always save to persistent registered_users store in localStorage
-      saveRegisteredUser(newUser);
-
-      // Attempt backend registration if available
+      // 1. Attempt Spring Boot backend registration if online
       try {
         const payload = {
           name: userData.name,
-          firstName: userData.name ? userData.name.split(' ')[0] : 'User',
-          lastName: userData.name && userData.name.includes(' ') ? userData.name.substring(userData.name.indexOf(' ') + 1) : 'Account',
-          email: email,
+          firstName,
+          lastName,
+          email,
           password: userData.password,
           department: userData.department || 'Engineering',
           role: userData.role || 'Employee',
@@ -195,28 +197,63 @@ export const AuthProvider = ({ children }) => {
         const data = await authService.register(payload);
         if (data?.user) {
           setUser(data.user);
-          setToken(data.token || data.accessToken || `token_${Date.now()}`);
+          setToken(data.token || `token_${Date.now()}`);
           return data.user;
         }
       } catch (backendErr) {
-        console.error('Backend registration error:', backendErr);
-        if (typeof backendErr === 'string' && (backendErr.includes('already exists') || backendErr.includes('Password') || backendErr.includes('valid'))) {
-          throw backendErr;
+        const errMsg = typeof backendErr === 'string' ? backendErr : backendErr?.message || '';
+        if (errMsg.toLowerCase().includes('already exists')) {
+          throw 'An account with this email already exists in Supabase. Please log in.';
         }
-        throw backendErr;
+        // If backend was unreachable (e.g. hosted on Vercel), fall through to direct Supabase registration
       }
 
-      // Establish local session
+      // 2. Direct registration in Supabase (required for hosted site without backend)
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingUser) {
+        throw 'An account with this email already exists in Supabase. Please log in.';
+      }
+
+      const hashedPassword = bcrypt.hashSync(userData.password, 10);
+      const now = new Date().toISOString();
+
+      const { data: createdUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          password: hashedPassword,
+          department: userData.department || 'Engineering',
+          role: userData.role || 'Employee',
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Supabase user insert error:', insertError);
+        throw insertError.message || 'Failed to create user in Supabase.';
+      }
+
+      const fullName = `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim() || email.split('@')[0];
       const sessionUser = {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        department: newUser.department,
-        avatar: newUser.avatar,
+        id: createdUser.id,
+        name: fullName,
+        email: createdUser.email,
+        role: createdUser.role || 'Employee',
+        department: createdUser.department || 'Engineering',
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
       };
+
       setUser(sessionUser);
-      setToken(`demo-session-token-${Date.now()}`);
+      setToken(`supabase_token_${createdUser.id}_${Date.now()}`);
       return sessionUser;
     } finally {
       setLoading(false);
@@ -227,10 +264,12 @@ export const AuthProvider = ({ children }) => {
     authService.logout();
     setUser(null);
     setToken(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   const updateUser = (data) => {
-    setUser(prev => ({ ...prev, ...data }));
+    setUser((prev) => ({ ...prev, ...data }));
   };
 
   return (
@@ -254,17 +293,7 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    console.warn('useAuth was called outside of AuthProvider, using default demo session.');
-    return {
-      user: DEFAULT_DEMO_USER,
-      token: 'demo-jwt-token-12345',
-      isAuthenticated: true,
-      loading: false,
-      login: async () => DEFAULT_DEMO_USER,
-      register: async () => DEFAULT_DEMO_USER,
-      logout: () => {},
-      updateUser: () => {},
-    };
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

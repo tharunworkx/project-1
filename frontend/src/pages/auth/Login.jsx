@@ -53,22 +53,6 @@ export const Login = () => {
     };
   }, []);
 
-  // Auto-detect department & role if user typed a saved email
-  useEffect(() => {
-    if (email && email.includes('@')) {
-      try {
-        const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
-        const match = users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase());
-        if (match) {
-          if (match.department) setDepartment(match.department);
-          if (match.role) setRole(match.role);
-        }
-      } catch {
-        // Ignore JSON error
-      }
-    }
-  }, [email]);
-
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
     if (!email || !password) {
@@ -77,28 +61,15 @@ export const Login = () => {
     }
     setError('');
     try {
-      await login(email, password, { role, department });
+      await login(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Invalid login credentials');
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setError('');
-    try {
-      const targetEmail = email?.trim() || 'user@company.com';
-      const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
-      const registered = users.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase());
-      if (registered) {
-        await login(registered.email, registered.password, { role, department });
-      } else {
-        await login(targetEmail, 'password123', { role, department });
-      }
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Google authentication failed');
-    }
+  const handleGoogleLogin = () => {
+    setError('Single Sign-On is disabled. Please log in with your Supabase-registered email and password.');
   };
   return (
     <div className="dark relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-black text-zinc-100 overflow-hidden select-none">

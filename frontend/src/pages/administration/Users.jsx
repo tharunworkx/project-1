@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import userService from '../../services/userService';
+import { supabase } from '../../services/supabaseStorage';
 import {
   Plus,
   Search,
@@ -110,54 +111,43 @@ export const Users = () => {
       try {
         const dbUsers = await userService.getUsers();
         if (Array.isArray(dbUsers) && dbUsers.length > 0) {
-          finalUsers = dbUsers.map((u) => {
-            const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.name || u.email.split('@')[0];
-            const initials = fullName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
-            return {
-              id: `usr_${u.id}`,
-              name: fullName,
-              email: u.email,
-              avatarFallback: initials,
-              role: u.role || 'Employee',
-              department: u.department || 'General',
-              status: 'Active',
-              lastActive: 'Just now',
-            };
-          });
+          finalUsers = dbUsers;
         }
       } catch (err) {
-        console.warn('Could not fetch users from API, falling back to local list:', err);
+        console.warn('Backend unavailable, fetching users directly from Supabase:', err);
       }
 
-      // Also merge any users registered in localStorage that are not yet in finalUsers
-      try {
-        const localRegistered = JSON.parse(localStorage.getItem('registered_users') || '[]');
-        const base = finalUsers.length > 0 ? [...finalUsers] : [...initialUsers];
-        if (localRegistered.length > 0) {
-          localRegistered.forEach((lu) => {
-            if (lu.email && !base.some((m) => m.email?.toLowerCase() === lu.email?.toLowerCase())) {
-              const initials = (lu.name || 'User').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
-              base.push({
-                id: lu.id || `usr_${Date.now()}`,
-                name: lu.name || 'User',
-                email: lu.email,
-                avatarFallback: initials,
-                role: lu.role || 'Employee',
-                department: lu.department || 'General',
-                status: 'Active',
-                lastActive: 'Just now',
-              });
-            }
-          });
+      if (finalUsers.length === 0) {
+        try {
+          const { data: supaUsers } = await supabase
+            .from('users')
+            .select('*')
+            .order('id', { ascending: false });
+          if (Array.isArray(supaUsers)) {
+            finalUsers = supaUsers;
+          }
+        } catch (supaErr) {
+          console.warn('Could not fetch from Supabase:', supaErr);
         }
-        finalUsers = base;
-      } catch (e) {
-        // ignore
       }
 
-      if (finalUsers.length > 0) {
-        setUsers(finalUsers);
-      }
+      const mapped = finalUsers.map((u) => {
+        const fullName = `${u.firstName || u.first_name || ''} ${u.lastName || u.last_name || ''}`.trim() || u.name || u.email.split('@')[0];
+        const initials = fullName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+        return {
+          id: `usr_${u.id}`,
+          rawId: u.id,
+          name: fullName,
+          email: u.email,
+          avatarFallback: initials,
+          role: u.role || 'Employee',
+          department: u.department || 'General',
+          status: 'Active',
+          lastActive: 'Just now',
+        };
+      });
+
+      setUsers(mapped);
     };
 
     loadUsers();
@@ -231,6 +221,25 @@ export const Users = () => {
         u.id === id ? { ...u, status: u.status === 'Active' ? 'Inactive' : 'Active' } : u
       )
     );
+  };
+
+  const handleDeleteUser = async (userToDelete) => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${userToDelete.email} from Supabase? They will immediately be unable to log in.`)) {
+      return;
+    }
+    try {
+      if (userToDelete.rawId) {
+        await supabase.from('users').delete().eq('id', userToDelete.rawId);
+      } else {
+        await supabase.from('users').delete().eq('email', userToDelete.email);
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id && u.email !== userToDelete.email));
+      setNotification(`User permanently deleted from Supabase: ${userToDelete.email}`);
+      setTimeout(() => setNotification(''), 4000);
+    } catch (err) {
+      console.error('Failed to delete user from Supabase:', err);
+      alert('Error deleting user from Supabase.');
+    }
   };
 
   return (
@@ -346,11 +355,18 @@ export const Users = () => {
                             <span>Reset Credentials</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2"
+                            className="cursor-pointer text-amber-600 focus:text-amber-600 flex items-center gap-2"
                             onClick={() => handleDeactivate(user.id)}
                           >
                             <UserX className="size-4" />
                             <span>{user.status === 'Active' ? 'Deactivate User' : 'Reactivate User'}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-rose-600 focus:text-rose-600 flex items-center gap-2 font-medium"
+                            onClick={() => handleDeleteUser(user)}
+                          >
+                            <Trash2 className="size-4" />
+                            <span>Delete from Supabase</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
