@@ -54,7 +54,7 @@ export const CreateExpense = () => {
     amount: '',
     currency: 'INR',
     date: new Date().toISOString().split('T')[0],
-    department: 'Engineering',
+    department: user?.department || 'Engineering & DevOps',
     project: 'PRJ-Alpha (Cloud Migration)',
     description: '',
   });
@@ -355,11 +355,13 @@ export const CreateExpense = () => {
                   onChange={handleChange}
                   triggerClassName="h-10 rounded-lg text-xs sm:text-sm bg-card border-border"
                   options={[
+                    { value: "Engineering & DevOps", label: "Engineering & DevOps" },
+                    { value: "Finance & Accounts", label: "Finance & Accounts" },
+                    { value: "Growth & Marketing", label: "Growth & Marketing" },
+                    { value: "Enterprise Sales", label: "Enterprise Sales" },
+                    { value: "People & Operations", label: "People & Operations" },
+                    { value: "Executive Management", label: "Executive Management" },
                     { value: "Engineering", label: "Engineering" },
-                    { value: "DevOps", label: "DevOps & Infrastructure" },
-                    { value: "Product", label: "Product & UX" },
-                    { value: "Sales", label: "Sales & Accounts" },
-                    { value: "Marketing", label: "Marketing" },
                     { value: "Finance", label: "Finance & Operations" },
                   ]}
                 />

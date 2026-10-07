@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
   AlertCircle,
+  Building2,
+  Shield,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CustomSelect } from '@/components/ui/select';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
 import { useAuth } from '../../context/AuthContext';
 
@@ -16,9 +19,41 @@ export const Login = () => {
   // Fresh, empty state for new user input
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [department, setDepartment] = useState('Engineering & DevOps');
+  const [role, setRole] = useState('Employee');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+
+  // Handle department change with smart role defaults
+  const handleDepartmentChange = (newDept) => {
+    setDepartment(newDept);
+    if (newDept === 'Finance & Accounts') {
+      if (role === 'Employee') setRole('Finance Executive');
+    } else if (newDept === 'Executive Management') {
+      setRole('Admin');
+    } else {
+      if (role === 'Finance Executive' || role === 'Finance Manager / CFO') {
+        setRole('Employee');
+      }
+    }
+  };
+
+  // Auto-detect department & role if user typed a saved email
+  useEffect(() => {
+    if (email && email.includes('@')) {
+      try {
+        const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
+        const match = users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase());
+        if (match) {
+          if (match.department) setDepartment(match.department);
+          if (match.role) setRole(match.role);
+        }
+      } catch {
+        // Ignore JSON error
+      }
+    }
+  }, [email]);
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
@@ -28,7 +63,7 @@ export const Login = () => {
     }
     setError('');
     try {
-      await login(email, password);
+      await login(email, password, { role, department });
       navigate('/dashboard');
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Invalid login credentials');
@@ -42,9 +77,9 @@ export const Login = () => {
       const users = JSON.parse(localStorage.getItem('registered_users') || '[]');
       const registered = users.find(u => u.email?.toLowerCase() === targetEmail.toLowerCase());
       if (registered) {
-        await login(registered.email, registered.password);
+        await login(registered.email, registered.password, { role, department });
       } else {
-        await login(targetEmail, 'password123');
+        await login(targetEmail, 'password123', { role, department });
       }
       navigate('/dashboard');
     } catch (err) {
@@ -69,13 +104,16 @@ export const Login = () => {
         speedScale={1}
       />
 
-      {/* Perfectly Compact & Clean Login Card */}
-      <div className="relative z-10 w-full max-w-[360px] sm:max-w-[370px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200/80 dark:border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
+      {/* Perfectly Compact & Clean Login Card with Department Selection */}
+      <div className="relative z-10 w-full max-w-[390px] sm:max-w-[410px] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200/80 dark:border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
         {/* Title */}
         <div className="text-center mb-5">
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">
             Welcome to ExpenseHub
           </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-normal">
+            Sign in with your department and assigned role
+          </p>
         </div>
 
         {/* Error notification */}
@@ -174,6 +212,58 @@ export const Login = () => {
               >
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
+            </div>
+          </div>
+
+          {/* Choose Department & Role Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Department */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="login-dept">
+                <span className="flex items-center gap-1">
+                  <Building2 className="size-3.5 text-zinc-400" />
+                  <span>Department</span>
+                </span>
+              </label>
+              <CustomSelect
+                id="login-dept"
+                name="department"
+                value={department}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
+                triggerClassName="h-10 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium"
+                options={[
+                  { value: "Engineering & DevOps", label: "Engineering & DevOps" },
+                  { value: "Finance & Accounts", label: "Finance & Accounts" },
+                  { value: "Growth & Marketing", label: "Growth & Marketing" },
+                  { value: "Enterprise Sales", label: "Enterprise Sales" },
+                  { value: "People & Operations", label: "People & Operations" },
+                  { value: "Executive Management", label: "Executive Management" },
+                ]}
+              />
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1" htmlFor="login-role">
+                <span className="flex items-center gap-1">
+                  <Shield className="size-3.5 text-zinc-400" />
+                  <span>Role</span>
+                </span>
+              </label>
+              <CustomSelect
+                id="login-role"
+                name="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                triggerClassName="h-10 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50/40 dark:bg-zinc-800/40 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 font-medium"
+                options={[
+                  { value: "Employee", label: "Employee" },
+                  { value: "Manager", label: "Manager" },
+                  { value: "Finance Executive", label: "Finance Executive" },
+                  { value: "Finance Manager / CFO", label: "Finance Manager / CFO" },
+                  { value: "Admin", label: "Admin" },
+                ]}
+              />
             </div>
           </div>
 

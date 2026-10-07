@@ -396,6 +396,14 @@ export default function Topbar() {
                   <div className="flex flex-1 flex-col items-start leading-tight">
                     <span className="text-foreground text-sm font-semibold">{user?.name || "Tharun"}</span>
                     <span className="text-muted-foreground text-xs mt-0.5">{user?.email || "tharun@company.com"}</span>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-semibold border-primary/30 text-primary bg-primary/5">
+                        {user?.role || "Employee"}
+                      </Badge>
+                      <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal text-muted-foreground">
+                        {user?.department || "Engineering & DevOps"}
+                      </Badge>
+                    </div>
                   </div>
                 </DropdownMenuLabel>
               </DropdownMenuGroup>

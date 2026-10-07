@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "cn";
 
+import { useAuth } from "../../context/AuthContext";
+
 function CollapsibleNavItem({ item, location }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -168,6 +170,23 @@ function CollapsibleNavItem({ item, location }) {
 export function AppSidebar({ ...props }) {
   const location = useLocation();
   const { open, toggleSidebar } = useSidebar();
+  const { user } = useAuth();
+
+  const roleName = user?.role || "Employee";
+  const roleLower = roleName.toLowerCase();
+
+  const isAdmin = roleLower === "admin";
+  const isCFO =
+    roleLower.includes("cfo") ||
+    roleLower.includes("finance manager") ||
+    roleLower.includes("head of finance");
+  const isFinanceExec =
+    roleLower.includes("finance exec") ||
+    roleLower === "finance admin" ||
+    roleLower === "finance";
+  const isFinanceTeam = isFinanceExec || isCFO || isAdmin;
+  const isManager = roleLower.includes("manager") || isCFO || isAdmin;
+  const isEmployee = !isManager && !isFinanceTeam && !isAdmin;
 
   const navGroups = [
     {
@@ -282,6 +301,43 @@ export function AppSidebar({ ...props }) {
     },
   ];
 
+  const filteredNavGroups = React.useMemo(() => {
+    return navGroups
+      .map((group) => {
+        const filteredItems = group.items
+          .map((item) => {
+            if (item.childItems) {
+              const filteredChildren = item.childItems.filter((sub) => {
+                if (sub.href === "/admin/users" || sub.href === "/admin/departments") return isAdmin;
+                if (sub.href === "/admin/projects") return isAdmin || isManager;
+                if (sub.href === "/admin/categories" || sub.href === "/admin/policies") return isCFO || isAdmin;
+                return true;
+              });
+              if (filteredChildren.length === 0) return null;
+              return { ...item, childItems: filteredChildren };
+            }
+
+            if (item.href === "/finance") return isFinanceTeam ? item : null;
+            if (item.href === "/approvals") return (isManager || isFinanceTeam) ? item : null;
+            if (item.href === "/fraud-detection") return (isCFO || isAdmin) ? item : null;
+            if (item.href === "/budgets") return (isManager || isFinanceTeam) ? item : null;
+            if (item.href === "/reports") return (isManager || isFinanceTeam) ? item : null;
+            if (item.href === "/audit") return isFinanceTeam ? item : null;
+            if (item.href === "/integrations") return isAdmin ? item : null;
+            if (item.href === "/monitoring") return (isCFO || isAdmin) ? item : null;
+
+            return item;
+          })
+          .filter(Boolean);
+
+        return {
+          ...group,
+          items: filteredItems,
+        };
+      })
+      .filter((group) => group.items.length > 0);
+  }, [isAdmin, isCFO, isFinanceTeam, isManager, isEmployee]);
+
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
       {/* 1. Header: Fixed-origin minimize button anchored to side with dynamic theme background & action icon */}
@@ -304,7 +360,7 @@ export function AppSidebar({ ...props }) {
 
       {/* 2. Menu Navigation without group title words */}
       <SidebarContent className="px-2 py-2 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2">
-        {navGroups.map((group, groupIdx) => (
+        {filteredNavGroups.map((group, groupIdx) => (
           <SidebarGroup key={group.groupLabel || groupIdx} className="py-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:my-0.5">
             <SidebarGroupContent>
               <SidebarMenu>

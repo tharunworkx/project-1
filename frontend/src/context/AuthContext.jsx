@@ -19,7 +19,7 @@ const INITIAL_REGISTERED_USERS = [
     email: 'tharun@mail.com',
     password: 'Tharun@123',
     role: 'Admin',
-    department: 'Engineering',
+    department: 'Engineering & DevOps',
     avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Tharun',
   },
   {
@@ -28,8 +28,44 @@ const INITIAL_REGISTERED_USERS = [
     email: 'alex.morgan@company.com',
     password: 'password123',
     role: 'Admin',
-    department: 'Finance & Operations',
+    department: 'Executive Management',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'usr_002',
+    name: 'Karthik Mohan',
+    email: 'karthik.m@company.com',
+    password: 'password123',
+    role: 'Finance Executive',
+    department: 'Finance & Accounts',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Karthik',
+  },
+  {
+    id: 'usr_003',
+    name: 'Anita Desai',
+    email: 'anita.d@company.com',
+    password: 'password123',
+    role: 'Finance Manager / CFO',
+    department: 'Finance & Accounts',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Anita',
+  },
+  {
+    id: 'usr_004',
+    name: 'Priya Sharma',
+    email: 'priya.s@company.com',
+    password: 'password123',
+    role: 'Manager',
+    department: 'Growth & Marketing',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Priya',
+  },
+  {
+    id: 'usr_005',
+    name: 'Arun Kumar',
+    email: 'arun.kumar@company.com',
+    password: 'password123',
+    role: 'Employee',
+    department: 'Engineering & DevOps',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Arun',
   },
 ];
 
@@ -103,17 +139,33 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  const login = async (email, password, roleOverride = null) => {
+  const login = async (email, password, roleOrOptions = null, maybeDept = null) => {
     setLoading(true);
+    let roleOverride = null;
+    let departmentOverride = null;
+
+    if (roleOrOptions && typeof roleOrOptions === 'object') {
+      roleOverride = roleOrOptions.role;
+      departmentOverride = roleOrOptions.department;
+    } else {
+      roleOverride = roleOrOptions;
+      departmentOverride = maybeDept;
+    }
+
     const normalizedEmail = (email || '').toLowerCase().trim();
     try {
       // 1. Attempt backend API call first
       try {
         const data = await authService.login({ email: normalizedEmail, password });
         if (data?.user) {
-          setUser(data.user);
+          const userWithOverrides = {
+            ...data.user,
+            ...(roleOverride ? { role: roleOverride } : {}),
+            ...(departmentOverride ? { department: departmentOverride } : {}),
+          };
+          setUser(userWithOverrides);
           setToken(data.token || `token_${Date.now()}`);
-          return data.user;
+          return userWithOverrides;
         }
       } catch (backendErr) {
         console.warn('Backend unavailable, verifying locally:', backendErr);
@@ -129,14 +181,25 @@ export const AuthProvider = ({ children }) => {
         if (registered.password && registered.password !== password) {
           throw 'Invalid login credentials';
         }
+        const assignedRole = roleOverride || registered.role || 'Employee';
+        const assignedDept = departmentOverride || registered.department || 'Engineering & DevOps';
+
         const sessionUser = {
           id: registered.id || `usr_${Date.now()}`,
           name: registered.name || 'User',
           email: registered.email,
-          role: roleOverride || registered.role || 'Employee',
-          department: registered.department || 'Engineering',
+          role: assignedRole,
+          department: assignedDept,
           avatar: registered.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(registered.name || 'User')}`,
         };
+
+        // Persist updated role & department selection
+        saveRegisteredUser({
+          ...registered,
+          role: assignedRole,
+          department: assignedDept,
+        });
+
         setUser(sessionUser);
         setToken(`session-token-${Date.now()}`);
         return sessionUser;
@@ -144,12 +207,12 @@ export const AuthProvider = ({ children }) => {
 
       // 3. Demo accounts mapping
       const demoAccounts = [
-        { email: 'alex.morgan@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Finance & Operations' },
+        { email: 'alex.morgan@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Executive Management' },
         { email: 'karthik@company.com', name: 'Karthik Mohan', role: 'Finance Executive', department: 'Finance & Accounts' },
-        { email: 'anita@company.com', name: 'Anita Desai', role: 'Finance Manager / CFO', department: 'Executive Finance' },
-        { email: 'arun@company.com', name: 'Arun Kumar', role: 'Employee', department: 'Engineering' },
-        { email: 'priya@company.com', name: 'Priya Sharma', role: 'Manager', department: 'Marketing' },
-        { email: 'user@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Finance & Operations' },
+        { email: 'anita@company.com', name: 'Anita Desai', role: 'Finance Manager / CFO', department: 'Finance & Accounts' },
+        { email: 'arun@company.com', name: 'Arun Kumar', role: 'Employee', department: 'Engineering & DevOps' },
+        { email: 'priya@company.com', name: 'Priya Sharma', role: 'Manager', department: 'Growth & Marketing' },
+        { email: 'user@company.com', name: 'Alex Morgan', role: 'Admin', department: 'Executive Management' },
       ];
 
       const matchedDemo = demoAccounts.find((d) =>
@@ -157,20 +220,34 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (matchedDemo) {
+        const assignedRole = roleOverride || matchedDemo.role;
+        const assignedDept = departmentOverride || matchedDemo.department;
         const demoUser = {
           ...DEFAULT_DEMO_USER,
           email: normalizedEmail,
           name: matchedDemo.name,
-          role: roleOverride || matchedDemo.role,
-          department: matchedDemo.department,
+          role: assignedRole,
+          department: assignedDept,
         };
         setUser(demoUser);
         setToken(`demo-session-token-${Date.now()}`);
         return demoUser;
       }
 
-      // 4. If credentials don't match any registered or demo account
-      throw 'Invalid login credentials';
+      // 4. Fallback: dynamic session with chosen credentials, role & department
+      const dynamicUser = {
+        id: `usr_${Date.now()}`,
+        name: normalizedEmail.split('@')[0] || 'User',
+        email: normalizedEmail,
+        password: password,
+        role: roleOverride || 'Employee',
+        department: departmentOverride || 'Engineering & DevOps',
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(normalizedEmail)}`,
+      };
+      saveRegisteredUser(dynamicUser);
+      setUser(dynamicUser);
+      setToken(`session-token-${Date.now()}`);
+      return dynamicUser;
     } finally {
       setLoading(false);
     }
