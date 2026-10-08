@@ -124,8 +124,9 @@ export const Notifications = () => {
     if (!n.isRead) {
       notificationMockService.markAsRead(n.id);
     }
-    if (n.link) {
-      navigate(n.link);
+    const target = n.link || n.path;
+    if (target) {
+      navigate(target);
     }
   };
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import bcrypt from 'bcryptjs';
 import authService from '../services/authService';
 import { supabase } from '../services/supabaseStorage';
+import notificationMockService from '../services/mock/notificationMockService';
 
 const AuthContext = createContext(null);
 
@@ -56,13 +57,18 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('user');
           localStorage.removeItem('token');
         } else if (dbUser) {
-          // Keep role & department strictly synchronized with Supabase
-          if (dbUser.role !== user.role || dbUser.department !== user.department) {
-            setUser((prev) => ({
-              ...prev,
-              role: dbUser.role || prev.role,
-              department: dbUser.department || prev.department,
-            }));
+          const fullName = [dbUser.first_name, dbUser.last_name].filter(Boolean).join(' ') || (dbUser.email ? dbUser.email.split('@')[0] : 'User');
+          // Keep name, role & department strictly synchronized with Supabase
+          if (dbUser.role !== user.role || dbUser.department !== user.department || fullName !== user.name) {
+            const updatedProfile = {
+              ...user,
+              name: fullName,
+              role: dbUser.role || user.role,
+              department: dbUser.department || user.department,
+              avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+            };
+            setUser(updatedProfile);
+            localStorage.setItem('user', JSON.stringify(updatedProfile));
           }
         }
       } catch (err) {
@@ -126,6 +132,15 @@ export const AuthProvider = ({ children }) => {
         throw 'Account not found in Supabase. You must sign up first before logging in.';
       }
 
+      // Check if account registration is pending admin approval
+      if (dbUser.role && dbUser.role.startsWith('PENDING:')) {
+        const requestedRole = dbUser.role.replace('PENDING:', '');
+        throw `Your registration request for "${requestedRole}" in ${dbUser.department || 'the team'} is currently pending approval by an administrator. Please wait until an admin approves your account before logging in.`;
+      }
+      if (dbUser.role === 'REJECTED') {
+        throw 'Your registration request was declined by an administrator.';
+      }
+
       // 3. Verify Password against BCrypt hash stored in Supabase
       let isPasswordValid = false;
       if (dbUser.password) {
@@ -164,7 +179,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Register user directly into Supabase
+   * Register user directly into Supabase (Requires Admin approval before login)
    */
   const register = async (userData) => {
     setLoading(true);
@@ -182,47 +197,29 @@ export const AuthProvider = ({ children }) => {
     const nameParts = (userData.name || '').trim().split(' ');
     const firstName = nameParts[0] || 'User';
     const lastName = nameParts.slice(1).join(' ') || 'Account';
+    const fullName = `${firstName} ${lastName}`.trim();
+    const requestedRole = userData.role || 'Employee';
+    const requestedDept = userData.department || 'Engineering & DevOps';
 
     try {
-      // 1. Attempt Spring Boot backend registration if online
-      try {
-        const payload = {
-          name: userData.name,
-          firstName,
-          lastName,
-          email,
-          password: userData.password,
-          department: userData.department || 'Engineering',
-          role: userData.role || 'Employee',
-        };
-        const data = await authService.register(payload);
-        if (data?.user) {
-          setUser(data.user);
-          setToken(data.token || `token_${Date.now()}`);
-          return data.user;
-        }
-      } catch (backendErr) {
-        const errMsg = typeof backendErr === 'string' ? backendErr : backendErr?.message || '';
-        if (errMsg.toLowerCase().includes('already exists')) {
-          throw 'An account with this email already exists in Supabase. Please log in.';
-        }
-        // If backend was unreachable (e.g. hosted on Vercel), fall through to direct Supabase registration
-      }
-
-      // 2. Direct registration in Supabase (required for hosted site without backend)
+      // 1. Direct registration check in Supabase
       const { data: existingUser } = await supabase
         .from('users')
-        .select('id')
+        .select('id, role')
         .eq('email', email)
         .maybeSingle();
 
       if (existingUser) {
+        if (existingUser.role && existingUser.role.startsWith('PENDING:')) {
+          throw 'A registration request for this email is already awaiting administrator approval. Please wait for an admin to approve your request.';
+        }
         throw 'An account with this email already exists in Supabase. Please log in.';
       }
 
       const hashedPassword = bcrypt.hashSync(userData.password, 10);
       const now = new Date().toISOString();
 
+      // Store with PENDING prefix in role column: requiring existing admin approval
       const { data: createdUser, error: insertError } = await supabase
         .from('users')
         .insert({
@@ -230,8 +227,8 @@ export const AuthProvider = ({ children }) => {
           last_name: lastName,
           email: email,
           password: hashedPassword,
-          department: userData.department || 'Engineering',
-          role: userData.role || 'Employee',
+          department: requestedDept,
+          role: `PENDING:${requestedRole}`,
           created_at: now,
           updated_at: now,
         })
@@ -240,22 +237,34 @@ export const AuthProvider = ({ children }) => {
 
       if (insertError) {
         console.error('Supabase user insert error:', insertError);
-        throw insertError.message || 'Failed to create user in Supabase.';
+        throw insertError.message || 'Failed to submit registration request to Supabase.';
       }
 
-      const fullName = `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim() || email.split('@')[0];
-      const sessionUser = {
-        id: createdUser.id,
-        name: fullName,
-        email: createdUser.email,
-        role: createdUser.role || 'Employee',
-        department: createdUser.department || 'Engineering',
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
-      };
+      // Notify existing admin about the new account registration request
+      try {
+        await notificationMockService.addNotification({
+          title: 'New Account Approval Request',
+          message: `${fullName} (${email}) requested registration as ${requestedRole} in ${requestedDept}. Administrator approval required before login.`,
+          type: 'Approval Pending',
+          relatedModule: 'System',
+          link: '/admin/users',
+          path: '/admin/users',
+          userId: createdUser?.id,
+          userEmail: email,
+          requestedRole,
+          department: requestedDept,
+        });
+      } catch (notifErr) {
+        console.warn('Could not post admin notification:', notifErr);
+      }
 
-      setUser(sessionUser);
-      setToken(`supabase_token_${createdUser.id}_${Date.now()}`);
-      return sessionUser;
+      // Return pending approval result without setting user session
+      return {
+        pendingApproval: true,
+        user: createdUser,
+        requestedRole,
+        department: requestedDept,
+      };
     } finally {
       setLoading(false);
     }
@@ -269,8 +278,43 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  const updateUser = (data) => {
-    setUser((prev) => ({ ...prev, ...data }));
+  const updateUser = async (data) => {
+    const updatedUser = { ...user, ...data };
+    if (data.name) {
+      updatedUser.name = data.name;
+      updatedUser.avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`;
+    }
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    // Persist changes directly into Supabase so re-logging in keeps the updated name
+    try {
+      const emailToUpdate = (data.email || user?.email || '').toLowerCase().trim();
+      const idToUpdate = data.id || user?.id;
+
+      const payload = {
+        updated_at: new Date().toISOString(),
+      };
+      if (data.name) {
+        const parts = data.name.trim().split(' ');
+        payload.first_name = parts[0] || '';
+        payload.last_name = parts.slice(1).join(' ') || '';
+      }
+      if (data.department) {
+        payload.department = data.department;
+      }
+      if (data.role) {
+        payload.role = data.role;
+      }
+
+      if (idToUpdate) {
+        await supabase.from('users').update(payload).eq('id', idToUpdate);
+      } else if (emailToUpdate) {
+        await supabase.from('users').update(payload).eq('email', emailToUpdate);
+      }
+    } catch (err) {
+      console.warn('Failed to persist profile update to Supabase:', err);
+    }
   };
 
   return (

@@ -38,15 +38,30 @@ export const Settings = () => {
     .slice(0, 2)
     .toUpperCase();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    updateUser({
-      name: formData.name,
-      email: formData.email,
-      department: formData.department,
-    });
-    setSuccess('Settings and preferences saved successfully.');
-    setTimeout(() => setSuccess(''), 4000);
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        department: user.department || prev.department,
+      }));
+    }
+  }, [user]);
+
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    try {
+      await updateUser({
+        name: formData.name,
+        email: formData.email,
+        department: formData.department,
+      });
+      setSuccess('Settings and profile name saved successfully to Supabase.');
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      console.error('Settings save error:', err);
+    }
   };
 
   return (

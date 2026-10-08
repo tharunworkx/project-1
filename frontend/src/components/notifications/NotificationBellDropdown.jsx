@@ -99,8 +99,9 @@ export const NotificationBellDropdown = () => {
       notificationMockService.markAsRead(item.id);
     }
     setOpen(false);
-    if (item.link) {
-      navigate(item.link);
+    const target = item.link || item.path;
+    if (target) {
+      navigate(target);
     }
   };
 

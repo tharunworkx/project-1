@@ -37,7 +37,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const pendingApprovalsData = [
   {
@@ -447,17 +446,10 @@ export const ApprovalQueue = () => {
                 className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
               />
             </div>
-            {selectedIds.length > 0 ? (
-              <Button size="sm" className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-xs" onClick={handleBatchApprove}>
-                <Check className="size-3.5" />
-                <span>Approve ({selectedIds.length})</span>
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
-                <Download className="size-3.5" />
-                <span>Export</span>
-              </Button>
-            )}
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
+              <Download className="size-3.5" />
+              <span>Export</span>
+            </Button>
           </div>
         </CardHeader>
 
@@ -471,75 +463,66 @@ export const ApprovalQueue = () => {
                 <p className="text-xs text-muted-foreground mt-0.5">No pending claims requiring review</p>
               </div>
             ) : (
-              filtered.map((row) => {
-                const isChecked = selectedIds.includes(row.id);
-                return (
-                  <div
-                    key={row.id}
-                    onClick={() => navigate(`/expenses/${row.id}`)}
-                    className={`p-4 flex flex-col gap-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors ${isChecked ? 'bg-muted/30' : ''}`}
-                    title="Tap to view full claim details"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={isChecked}
-                            onCheckedChange={() => toggleSelect(row.id)}
-                          />
-                        </div>
-                        <Avatar className="size-8.5 rounded-full border border-border/60 shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.claimant} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                            {row.avatarFallback}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col text-left leading-tight min-w-0">
-                          <span className="text-xs font-semibold text-foreground truncate">{row.claimant}</span>
-                          <span className="text-[11px] text-muted-foreground truncate">{row.email}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-xs font-bold text-foreground font-mono">{row.amount}</div>
-                        <StatusBadge status={row.status} />
+              filtered.map((row) => (
+                <div
+                  key={row.id}
+                  onClick={() => navigate(`/expenses/${row.id}`)}
+                  className="p-4 flex flex-col gap-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors"
+                  title="Tap to view full claim details"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar className="size-8.5 rounded-full border border-border/60 shrink-0">
+                        <AvatarImage src={row.avatar} alt={row.claimant} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {row.avatarFallback}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col text-left leading-tight min-w-0">
+                        <span className="text-xs font-semibold text-foreground truncate">{row.claimant}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">{row.email}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
-                      <span className="truncate">{row.category} • {row.department}</span>
-                      <span className="shrink-0">{row.date}</span>
-                    </div>
-
-                    {row.policyFlag && (
-                      <div className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                        <AlertTriangle className="size-3 shrink-0" />
-                        <span className="truncate">{row.policyFlag}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs text-destructive hover:bg-destructive/10"
-                        onClick={() => handleReject(row.id)}
-                      >
-                        <X className="size-3 mr-1" />
-                        <span>Reject</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                        onClick={() => handleApprove(row.id)}
-                      >
-                        <Check className="size-3 mr-1" />
-                        <span>Approve</span>
-                      </Button>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-bold text-foreground font-mono">{row.amount}</div>
+                      <StatusBadge status={row.status} />
                     </div>
                   </div>
-                );
-              })
+
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
+                    <span className="truncate">{row.category} • {row.department}</span>
+                    <span className="shrink-0">{row.date}</span>
+                  </div>
+
+                  {row.policyFlag && (
+                    <div className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <AlertTriangle className="size-3 shrink-0" />
+                      <span className="truncate">{row.policyFlag}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                      onClick={() => handleReject(row.id)}
+                    >
+                      <X className="size-3 mr-1" />
+                      <span>Reject</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={() => handleApprove(row.id)}
+                    >
+                      <Check className="size-3 mr-1" />
+                      <span>Approve</span>
+                    </Button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
 
@@ -548,13 +531,7 @@ export const ApprovalQueue = () => {
             <Table className="w-full min-w-[750px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10 pl-6">
-                    <Checkbox
-                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>EMPLOYEE</TableHead>
+                  <TableHead className="pl-6">EMPLOYEE</TableHead>
                   <TableHead>CATEGORY</TableHead>
                   <TableHead>DATE</TableHead>
                   <TableHead>PAYMENT MODE</TableHead>
@@ -566,42 +543,34 @@ export const ApprovalQueue = () => {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2" />
                       <p className="font-semibold text-foreground">Queue is completely cleared!</p>
                       <p className="text-xs text-muted-foreground mt-0.5">No pending claims requiring review</p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((row) => {
-                    const isChecked = selectedIds.includes(row.id);
-                    return (
-                      <TableRow
-                        key={row.id}
-                        onClick={() => navigate(`/expenses/${row.id}`)}
-                        className={`cursor-pointer hover:bg-muted/60 transition-colors ${isChecked ? "bg-muted/40" : ""}`}
-                        title="Click row to view full claim details"
-                      >
-                        <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={isChecked}
-                            onCheckedChange={() => toggleSelect(row.id)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2.5">
-                            <Avatar className="size-8.5 rounded-full border border-border/60">
-                              <AvatarImage src={row.avatar} alt={row.claimant} />
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                {row.avatarFallback}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col text-left leading-tight">
-                              <span className="text-xs font-semibold text-foreground">{row.claimant}</span>
-                              <span className="text-[11px] text-muted-foreground">{row.email}</span>
-                            </div>
+                  filtered.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      onClick={() => navigate(`/expenses/${row.id}`)}
+                      className="cursor-pointer hover:bg-muted/60 transition-colors"
+                      title="Click row to view full claim details"
+                    >
+                      <TableCell className="pl-6">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="size-8.5 rounded-full border border-border/60">
+                            <AvatarImage src={row.avatar} alt={row.claimant} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                              {row.avatarFallback}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col text-left leading-tight">
+                            <span className="text-xs font-semibold text-foreground">{row.claimant}</span>
+                            <span className="text-[11px] text-muted-foreground">{row.email}</span>
                           </div>
-                        </TableCell>
+                        </div>
+                      </TableCell>
                         <TableCell className="text-xs font-medium text-foreground">
                           <div>
                             <div>{row.category}</div>
@@ -652,9 +621,8 @@ export const ApprovalQueue = () => {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
+                    ))
+                  )}
               </TableBody>
             </Table>
           </div>

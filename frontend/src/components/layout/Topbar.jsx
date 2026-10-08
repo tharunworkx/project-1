@@ -252,7 +252,7 @@ export default function Topbar() {
       <div className="flex size-full items-center justify-between px-4 sm:px-6">
         {/* Left side: Mobile trigger and Clean Section Title */}
         <div className="flex items-center gap-3">
-          <SidebarTrigger className="md:hidden size-9 flex items-center justify-center rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs [&_svg]:size-4.5" />
+          <SidebarTrigger className="lg:hidden size-9 flex items-center justify-center rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs [&_svg]:size-4.5" />
           <h1 className="text-sm sm:text-base font-semibold text-foreground tracking-tight truncate">
             {currentTitle}
           </h1>

@@ -65,6 +65,20 @@ export const notificationMockService = {
     return updated;
   },
 
+  addNotification: async (notif) => {
+    const items = getStore();
+    const newNotif = {
+      id: `NOTIF-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+      priority: 'high',
+      ...notif,
+    };
+    const updated = [newNotif, ...items];
+    saveStore(updated);
+    return newNotif;
+  },
+
   deleteNotification: async (id) => {
     const items = getStore();
     const updated = items.filter((n) => n.id !== id);

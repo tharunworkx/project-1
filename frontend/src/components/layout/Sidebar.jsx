@@ -20,6 +20,7 @@ import {
   Bell,
   Landmark,
   FileText,
+  X,
 } from "lucide-react";
 import {
   Sidebar,
@@ -177,6 +178,13 @@ export function AppSidebar({ ...props }) {
   const location = useLocation();
   const { open, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   const { user } = useAuth();
+
+  // Automatically close the sidebar menu after selecting any section in mobile or tab view
+  React.useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [location.pathname, isMobile, setOpenMobile]);
 
   const roleName = user?.role || "Employee";
   const roleLower = roleName.toLowerCase();
@@ -339,16 +347,28 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
-      {/* 1. Header: Toggle button matching Image 1 (black in light) & Image 2 (white in dark) */}
+      {/* 1. Header: Toggle / Close button */}
       <SidebarHeader className="p-3 pb-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-2.5 group-data-[collapsible=icon]:h-14 border-none flex flex-row items-center justify-start group-data-[collapsible=icon]:justify-center overflow-hidden">
-        <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full shrink-0">
+        <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center w-full shrink-0">
+          {isMobile && (
+            <div className="flex items-center gap-2 pl-1">
+              <div className="size-7 rounded-lg bg-black text-white dark:bg-white dark:text-zinc-950 font-bold text-xs flex items-center justify-center">
+                E
+              </div>
+              <span className="font-bold text-xs tracking-tight text-foreground">
+                Expense Hub
+              </span>
+            </div>
+          )}
           <button
             type="button"
             onClick={toggleSidebar}
-            title={open ? "Collapse sidebar" : "Expand sidebar"}
+            title={isMobile ? "Close menu" : open ? "Collapse sidebar" : "Expand sidebar"}
             className="size-9 rounded-xl bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-black dark:hover:bg-zinc-100 dark:border-white shadow-xs flex items-center justify-center transition-colors cursor-pointer group-data-[collapsible=icon]:mx-auto"
           >
-            {open ? (
+            {isMobile ? (
+              <X className="size-4.5 stroke-[2]" />
+            ) : open ? (
               <PanelLeftClose className="size-4.5 stroke-[2]" />
             ) : (
               <PanelLeftOpen className="size-4.5 stroke-[2]" />
