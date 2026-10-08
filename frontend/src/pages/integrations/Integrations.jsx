@@ -422,14 +422,16 @@ export default function Integrations() {
             <span className="text-xs font-bold text-foreground block mb-2">Configured Event Webhook Endpoints</span>
             <div className="space-y-2">
               {mockWebhooks.map((wh) => (
-                <div key={wh.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono text-[10px] bg-primary/5 text-primary border-primary/20">
+                <div key={wh.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background text-xs min-w-0">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0 flex-1">
+                    <Badge variant="outline" className="font-mono text-[10px] bg-primary/5 text-primary border-primary/20 shrink-0">
                       {wh.event}
                     </Badge>
-                    <span className="font-mono text-muted-foreground text-[11px]">{wh.endpoint}</span>
+                    <span className="font-mono text-muted-foreground text-[11px] break-all truncate sm:truncate flex-1 min-w-0" title={wh.endpoint}>
+                      {wh.endpoint}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-border/40">
                     <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">{wh.successRate} Delivered</span>
                     <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]">
                       {wh.status}

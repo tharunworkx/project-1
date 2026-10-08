@@ -386,11 +386,11 @@ export const Reports = () => {
                   </div>
 
                   {/* Export Options: CSV, Excel, PDF */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
+                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer"
                       onClick={() => handleExport('csv')}
                     >
                       <Download className="size-3" />
@@ -400,7 +400,7 @@ export const Reports = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
+                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer"
                       onClick={() => handleExport('excel')}
                     >
                       <FileSpreadsheet className="size-3" />
@@ -409,7 +409,7 @@ export const Reports = () => {
 
                     <Button
                       size="sm"
-                      className="h-8 gap-1.5 text-xs rounded-full shadow-2xs bg-primary text-primary-foreground"
+                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full shadow-2xs bg-primary text-primary-foreground cursor-pointer"
                       onClick={() => handleExport('pdf')}
                     >
                       <Printer className="size-3" />
@@ -477,8 +477,8 @@ export const Reports = () => {
                 )}
 
                 {/* Search within report preview */}
-                <div className="pt-1 flex items-center justify-between">
-                  <div className="relative w-64">
+                <div className="pt-1 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between w-full">
+                  <div className="relative w-full sm:w-64">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                     <Input
                       type="text"
@@ -488,10 +488,10 @@ export const Reports = () => {
                         setPreviewSearch(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="h-8 pl-8 text-xs bg-muted/50 border-border/80"
+                      className="h-8 pl-8 text-xs bg-muted/50 border-border/80 w-full"
                     />
                   </div>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground self-start sm:self-auto shrink-0">
                     Showing {paginatedRecords.length} of {filteredRecords.length} records
                   </span>
                 </div>

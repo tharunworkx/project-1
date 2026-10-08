@@ -431,7 +431,7 @@ export const CreateExpense = () => {
                     placeholder="0.00"
                     value={formData.amount}
                     onChange={handleChange}
-                    className="pl-8 h-10 text-xs sm:text-sm font-semibold bg-card font-mono"
+                    className="pl-8 h-10 text-xs sm:text-sm font-semibold bg-card font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>

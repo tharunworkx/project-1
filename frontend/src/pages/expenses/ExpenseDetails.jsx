@@ -353,14 +353,14 @@ export const ExpenseDetails = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {isPending && canApproveOrReject && (
             <>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setRejectModalOpen(true)}
-                className="text-xs gap-1.5"
+                className="text-xs gap-1.5 flex-1 sm:flex-initial cursor-pointer"
               >
                 <XCircle className="size-3.5" />
                 <span>Reject Claim</span>
@@ -368,7 +368,7 @@ export const ExpenseDetails = () => {
               <Button
                 size="sm"
                 onClick={handleApprove}
-                className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-initial cursor-pointer"
               >
                 <CheckCircle2 className="size-3.5" />
                 <span>Approve Claim</span>
@@ -387,7 +387,7 @@ export const ExpenseDetails = () => {
             <Button
               size="sm"
               onClick={() => navigate(`/expenses/new?draftId=${expense.id}`)}
-              className="text-xs gap-1.5"
+              className="text-xs gap-1.5 flex-1 sm:flex-initial cursor-pointer"
             >
               <FileEdit className="size-3.5" />
               <span>Resume & Submit</span>
@@ -399,7 +399,7 @@ export const ExpenseDetails = () => {
               variant="outline"
               size="sm"
               onClick={handleDownloadProof}
-              className="text-xs gap-1.5"
+              className="text-xs gap-1.5 flex-1 sm:flex-initial cursor-pointer"
             >
               <Download className="size-3.5" />
               <span>Download Proof</span>

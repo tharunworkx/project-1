@@ -283,12 +283,12 @@ export default function AuditTrail() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => exportAuditLog('json')}
-            className="gap-2 text-xs cursor-pointer"
+            className="gap-2 text-xs cursor-pointer flex-1 sm:flex-initial"
           >
             <Download className="size-3.5" />
             <span>Export JSON</span>
@@ -297,7 +297,7 @@ export default function AuditTrail() {
             variant="outline"
             size="sm"
             onClick={() => exportAuditLog('csv')}
-            className="gap-2 text-xs cursor-pointer"
+            className="gap-2 text-xs cursor-pointer flex-1 sm:flex-initial"
           >
             <FileSpreadsheet className="size-3.5" />
             <span>Export CSV</span>

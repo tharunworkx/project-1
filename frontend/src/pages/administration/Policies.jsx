@@ -174,34 +174,36 @@ export const Policies = () => {
             </CardDescription>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-48 sm:w-64">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Filter policies..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
+                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs w-full"
               />
             </div>
-            <Button
-              size="sm"
-              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs"
-              onClick={() => setModalOpen(true)}
-            >
-              <Plus className="size-3.5" />
-              <span>New Rule</span>
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
-              <Download className="size-3.5" />
-              <span>Export</span>
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                size="sm"
+                className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs cursor-pointer"
+                onClick={() => setModalOpen(true)}
+              >
+                <Plus className="size-3.5" />
+                <span>New Rule</span>
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer">
+                <Download className="size-3.5" />
+                <span>Export</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="w-full min-w-[650px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-6">POLICY RULE</TableHead>

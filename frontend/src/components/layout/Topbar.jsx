@@ -251,14 +251,14 @@ export default function Topbar() {
 
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-border/80 bg-card flex items-center shadow-xs">
-      <div className="flex size-full items-center justify-between px-4 sm:px-6">
-        {/* Left side: Clean Section Title with Mobile Menu Toggle */}
-        <div className="flex items-center gap-2.5">
+      <div className="flex size-full items-center justify-between pl-2 pr-3.5 sm:px-6">
+        {/* Left side: Clean Section Title with Mobile Menu Toggle placed towards left corner */}
+        <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={toggleSidebar}
             title={open ? "Close menu" : "Open menu"}
-            className="md:hidden size-9 rounded-xl flex items-center justify-center text-zinc-700 hover:text-foreground hover:bg-zinc-200/50 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50 transition-colors cursor-pointer shrink-0"
+            className="md:hidden size-9 -ml-0.5 rounded-xl flex items-center justify-center text-zinc-700 hover:text-foreground hover:bg-zinc-200/50 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50 transition-colors cursor-pointer shrink-0"
             aria-label="Toggle Navigation Menu"
           >
             <PanelLeftOpen className="size-5 stroke-[2]" />
