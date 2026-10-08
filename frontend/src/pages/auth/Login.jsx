@@ -61,7 +61,7 @@ export const Login = () => {
     }
     setError('');
     try {
-      await login(email, password);
+      await login(email, password, { role, department });
       navigate('/dashboard');
     } catch (err) {
       setError(typeof err === 'string' ? err : 'Invalid login credentials');

@@ -211,17 +211,18 @@ export const DottedGlowBackground = ({
         const lin = mod < 1 ? mod : 2 - mod; // 0..1..0
         const a = 0.25 + 0.55 * lin; // 0.25..0.8 linearly
 
-        // draw glow when bright
+        // Fast, GPU-friendly halo glow for bright dots (avoids costly canvas shadowBlur re-rasterization)
         if (a > 0.6) {
           const glow = (a - 0.6) / 0.4; // 0..1
-          ctx.shadowColor = resolvedGlowColor;
-          ctx.shadowBlur = 6 * glow;
-        } else {
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
+          ctx.globalAlpha = a * opacity * 0.35 * glow;
+          ctx.fillStyle = resolvedGlowColor;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, radius * 2.2, 0, Math.PI * 2);
+          ctx.fill();
         }
 
         ctx.globalAlpha = a * opacity;
+        ctx.fillStyle = a > 0.6 ? resolvedGlowColor : resolvedColor;
         ctx.beginPath();
         ctx.arc(d.x, d.y, radius, 0, Math.PI * 2);
         ctx.fill();

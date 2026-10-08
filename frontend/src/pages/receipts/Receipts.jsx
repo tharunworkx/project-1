@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
-import { supabase } from '../../services/supabaseStorage';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import {
   Receipt,
   Search,
@@ -87,7 +87,7 @@ export default function Receipts() {
           console.warn('Backend API getExpenses offline, querying Supabase for receipts:', apiErr);
         }
 
-        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+        if ((!Array.isArray(dbExpenses) || dbExpenses.length === 0) && isSupabaseConfigured()) {
           const { data: supaExpenses, error: supaErr } = await supabase
             .from('expenses')
             .select('*')

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import userService from '../../services/userService';
-import { supabase } from '../../services/supabaseStorage';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import {
   Plus,
   Search,
@@ -117,7 +117,7 @@ export const Users = () => {
         console.warn('Backend unavailable, fetching users directly from Supabase:', err);
       }
 
-      if (finalUsers.length === 0) {
+      if (finalUsers.length === 0 && isSupabaseConfigured()) {
         try {
           const { data: supaUsers } = await supabase
             .from('users')

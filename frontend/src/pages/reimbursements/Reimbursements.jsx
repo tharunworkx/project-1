@@ -50,7 +50,7 @@ import { useFinanceRole } from '@/hooks/useFinanceRole';
 import { useToast } from '@/context/ToastContext';
 import reimbursementMockService from '@/services/mock/reimbursementMockService';
 import expenseService from '@/services/expenseService';
-import { supabase } from '@/services/supabaseStorage';
+import { supabase, isSupabaseConfigured } from '@/services/supabaseStorage';
 import { formatCurrency, formatDate } from '@/lib/currency';
 import ReimbursementDetailsModal from '@/components/finance/reimbursements/ReimbursementDetailsModal';
 import ConfirmDialog from '@/components/finance/common/ConfirmDialog';
@@ -119,14 +119,39 @@ function StatusBadge({ status }) {
   );
 }
 
+// Global in-memory caches to guarantee 0ms instant loading when navigating between tabs
+let memoryClaimsMaster = null;
+let memoryMetricsMaster = null;
+
 export const Reimbursements = () => {
   const { user } = useAuth();
   const { isEmployee, canTakeActions, role } = useFinanceRole();
   const { toastSuccess, toastError, toastWarning, toastInfo } = useToast();
 
-  const [list, setList] = useState([]);
-  const [metrics, setMetrics] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Instant synchronous state initialization: 0ms first paint
+  const [metrics, setMetrics] = useState(() => {
+    if (memoryMetricsMaster) return memoryMetricsMaster;
+    try {
+      const initialMetrics = reimbursementMockService.getDashboardMetricsSync();
+      memoryMetricsMaster = initialMetrics;
+      return initialMetrics;
+    } catch {
+      return null;
+    }
+  });
+
+  const [rawClaims, setRawClaims] = useState(() => {
+    if (memoryClaimsMaster && memoryClaimsMaster.length > 0) return memoryClaimsMaster;
+    try {
+      const initial = reimbursementMockService.getReimbursementsSync({});
+      memoryClaimsMaster = initial;
+      return initial;
+    } catch {
+      return [];
+    }
+  });
+
+  const [loading, setLoading] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -163,43 +188,96 @@ export const Reimbursements = () => {
     onConfirm: () => {},
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  // Fast synchronous client-side filtering (0ms lag on filter changes)
+  const list = useMemo(() => {
+    let result = [...rawClaims];
+
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.id?.toLowerCase().includes(q) ||
+          c.expenseId?.toLowerCase().includes(q) ||
+          c.employeeName?.toLowerCase().includes(q) ||
+          c.department?.toLowerCase().includes(q) ||
+          c.category?.toLowerCase().includes(q) ||
+          (c.paymentReferenceId && c.paymentReferenceId.toLowerCase().includes(q))
+      );
+    }
+
+    if (statusFilter && statusFilter !== 'All') {
+      result = result.filter((c) => c.status?.toLowerCase() === statusFilter.toLowerCase());
+    }
+
+    if (deptFilter && deptFilter !== 'All') {
+      result = result.filter((c) => c.department?.toLowerCase() === deptFilter.toLowerCase());
+    }
+
+    if (employeeFilter && employeeFilter !== 'All') {
+      result = result.filter((c) => c.employeeName?.toLowerCase() === employeeFilter.toLowerCase());
+    }
+
+    if (amountFilter && amountFilter !== 'All') {
+      if (amountFilter === 'under-2500') result = result.filter((c) => c.amount < 2500);
+      else if (amountFilter === '2500-10000') result = result.filter((c) => c.amount >= 2500 && c.amount <= 10000);
+      else if (amountFilter === '10000-50000') result = result.filter((c) => c.amount > 10000 && c.amount <= 50000);
+      else if (amountFilter === 'over-50000') result = result.filter((c) => c.amount > 50000);
+    }
+
+    if (dateFilter && dateFilter !== 'All') {
+      if (dateFilter === 'this-month') {
+        result = result.filter((c) => c.approvedDate?.startsWith('2026-10'));
+      }
+    }
+
+    if (isEmployee && user?.name) {
+      const target = user.name.toLowerCase();
+      const userClaims = result.filter(
+        (c) =>
+          c.employeeName?.toLowerCase() === target ||
+          c.email?.toLowerCase().includes(target)
+      );
+      if (userClaims.length > 0) {
+        result = userClaims;
+      }
+    }
+
+    if (sortBy) {
+      const field = sortBy;
+      const order = sortOrder === 'desc' ? -1 : 1;
+      result.sort((a, b) => {
+        if (field === 'amount') return (a.amount - b.amount) * order;
+        if (field === 'approvedDate') return (new Date(a.approvedDate) - new Date(b.approvedDate)) * order;
+        if (field === 'employeeName') return (a.employeeName || '').localeCompare(b.employeeName || '') * order;
+        if (field === 'status') return (a.status || '').localeCompare(b.status || '') * order;
+        return 0;
+      });
+    } else {
+      result.sort((a, b) => new Date(b.approvedDate) - new Date(a.approvedDate));
+    }
+
+    return result;
+  }, [rawClaims, search, statusFilter, deptFilter, employeeFilter, amountFilter, dateFilter, sortBy, sortOrder, isEmployee, user?.name]);
+
+  // Non-blocking background sync with backend
+  const loadData = async (showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     try {
-      const filters = {
-        search,
-        status: statusFilter,
-        department: deptFilter,
-        employee: employeeFilter,
-        amountRange: amountFilter,
-        dateRange: dateFilter,
-        sortBy,
-        sortOrder,
-        onlyEmployee: isEmployee ? user?.name : null,
-      };
-
-      const [mockItems, m] = await Promise.all([
-        reimbursementMockService.getReimbursements(filters),
-        reimbursementMockService.getDashboardMetrics(),
-      ]);
-
-      // Fetch real database expenses
-      let dbClaims = [];
+      let dbExpenses = [];
       try {
-        let dbExpenses = [];
-        try {
-          dbExpenses = await expenseService.getExpenses();
-        } catch (apiErr) {
-          console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
-        }
+        dbExpenses = await expenseService.getExpenses();
+      } catch {
+        // Fallback
+      }
 
-        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
-          const { data: supaExpenses, error: supaErr } = await supabase
+      if ((!Array.isArray(dbExpenses) || dbExpenses.length === 0) && isSupabaseConfigured()) {
+        try {
+          const { data: supaExpenses } = await supabase
             .from('expenses')
             .select('*')
             .order('created_at', { ascending: false });
 
-          if (!supaErr && Array.isArray(supaExpenses)) {
+          if (Array.isArray(supaExpenses)) {
             dbExpenses = supaExpenses.map((e) => ({
               id: e.id,
               title: e.title,
@@ -216,135 +294,95 @@ export const Reimbursements = () => {
               currency: e.currency,
             }));
           }
-        }
-
-        if (Array.isArray(dbExpenses)) {
-          // Keep claims that are APPROVED, REIMBURSED, or PROCESSING
-          const relevantDbExpenses = dbExpenses.filter((e) => {
-            const st = (e.status || '').toUpperCase();
-            return st === 'APPROVED' || st === 'REIMBURSED' || st === 'PROCESSING';
-          });
-
-          dbClaims = relevantDbExpenses.map((e) => {
-            const empName = e.submittedBy?.includes('@')
-              ? e.submittedBy.split('@')[0]
-              : (e.submittedBy || 'Employee');
-            const initials = empName.slice(0, 2).toUpperCase();
-            const numAmount = Number(e.amount) || 0;
-            const isReimbursed = (e.status || '').toUpperCase() === 'REIMBURSED';
-            const displayStatus = isReimbursed ? 'Reimbursed' : 'Approved';
-
-            return {
-              id: `RMB-DB-${e.id}`,
-              dbId: e.id,
-              expenseId: `EXP-${e.id}`,
-              employeeName: empName,
-              employeeId: `EMP-${e.id}`,
-              email: e.submittedBy || 'employee@company.com',
-              avatarFallback: initials,
-              department: e.department || 'Engineering',
-              category: e.category || 'General',
-              amount: numAmount,
-              approvedAmount: numAmount,
-              reimbursementAmount: numAmount,
-              currency: e.currency || 'INR',
-              submittedDate: e.createdAt ? e.createdAt.split('T')[0] : '2026-10-07',
-              approvedDate: e.updatedAt ? e.updatedAt.split('T')[0] : (e.createdAt ? e.createdAt.split('T')[0] : '2026-10-07'),
-              approvedBy: e.approvedBy || 'Manager',
-              status: displayStatus,
-              paymentMethod: 'Bank Transfer (NEFT)',
-              paymentReferenceId: isReimbursed ? `TXN-DB-${e.id}` : null,
-              description: e.description || e.title || 'Corporate Expense Claim',
-              merchant: e.title || 'Corporate Vendor',
-              receipt: e.receiptUrl ? {
-                fileName: 'receipt_invoice.pdf',
-                fileSize: '320 KB',
-                uploadedAt: e.createdAt || new Date().toISOString(),
-                fileType: 'pdf',
-              } : null,
-              policyValidation: {
-                isCompliant: true,
-                violations: [],
-                ruleName: 'Standard Expense Policy',
-                notes: 'All mandatory receipts and managerial approvals verified.',
-              },
-              bankDetails: {
-                bankName: 'HDFC Bank',
-                accountNumber: '••••••••4821',
-                ifsc: 'HDFC0001234',
-                upiId: `${empName.toLowerCase()}@okhdfcbank`,
-              },
-              timeline: [
-                {
-                  step: 'Claim Submitted',
-                  date: e.createdAt || new Date().toISOString(),
-                  by: empName,
-                  status: 'completed',
-                },
-                {
-                  step: 'Manager Approval Granted',
-                  date: e.updatedAt || new Date().toISOString(),
-                  by: e.approvedBy || 'Manager',
-                  status: 'completed',
-                },
-                {
-                  step: 'Disbursement & Settlement',
-                  date: isReimbursed ? (e.updatedAt || new Date().toISOString()) : null,
-                  by: isReimbursed ? 'Finance Disbursed' : 'Pending Settlement',
-                  status: isReimbursed ? 'completed' : 'pending',
-                },
-              ],
-            };
-          });
-
-          // Apply filters to dbClaims
-          if (search) {
-            const q = search.toLowerCase();
-            dbClaims = dbClaims.filter(
-              (c) =>
-                c.id.toLowerCase().includes(q) ||
-                c.expenseId.toLowerCase().includes(q) ||
-                c.employeeName.toLowerCase().includes(q) ||
-                c.department.toLowerCase().includes(q) ||
-                c.category.toLowerCase().includes(q) ||
-                (c.paymentReferenceId && c.paymentReferenceId.toLowerCase().includes(q))
-            );
-          }
-
-          if (statusFilter && statusFilter !== 'All') {
-            dbClaims = dbClaims.filter((c) => c.status.toLowerCase() === statusFilter.toLowerCase());
-          }
-
-          if (deptFilter && deptFilter !== 'All') {
-            dbClaims = dbClaims.filter((c) => c.department.toLowerCase() === deptFilter.toLowerCase());
-          }
-
-          if (employeeFilter && employeeFilter !== 'All') {
-            dbClaims = dbClaims.filter((c) => c.employeeName.toLowerCase() === employeeFilter.toLowerCase());
-          }
-
-          if (amountFilter && amountFilter !== 'All') {
-            if (amountFilter === 'under-2500') dbClaims = dbClaims.filter((c) => c.amount < 2500);
-            else if (amountFilter === '2500-10000') dbClaims = dbClaims.filter((c) => c.amount >= 2500 && c.amount <= 10000);
-            else if (amountFilter === '10000-50000') dbClaims = dbClaims.filter((c) => c.amount > 10000 && c.amount <= 50000);
-            else if (amountFilter === 'over-50000') dbClaims = dbClaims.filter((c) => c.amount > 50000);
-          }
-
-          if (isEmployee && user?.name) {
-            dbClaims = dbClaims.filter(
-              (c) =>
-                c.employeeName.toLowerCase() === user.name.toLowerCase() ||
-                c.email.toLowerCase() === user.email?.toLowerCase()
-            );
-          }
-        }
-      } catch (err) {
-        console.warn('Could not load database expenses for reimbursements:', err);
+        } catch {}
       }
 
-      // Merge metrics
+      const mockItems = reimbursementMockService.getReimbursementsSync({});
+      let dbClaims = [];
+
+      if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
+        const relevantDbExpenses = dbExpenses.filter((e) => {
+          const st = (e.status || '').toUpperCase();
+          return st === 'APPROVED' || st === 'REIMBURSED' || st === 'PROCESSING';
+        });
+
+        dbClaims = relevantDbExpenses.map((e) => {
+          const empName = e.submittedBy?.includes('@')
+            ? e.submittedBy.split('@')[0]
+            : (e.submittedBy || 'Employee');
+          const initials = empName.slice(0, 2).toUpperCase();
+          const numAmount = Number(e.amount) || 0;
+          const isReimbursed = (e.status || '').toUpperCase() === 'REIMBURSED';
+          const displayStatus = isReimbursed ? 'Reimbursed' : 'Approved';
+
+          return {
+            id: `RMB-DB-${e.id}`,
+            dbId: e.id,
+            expenseId: `EXP-${e.id}`,
+            employeeName: empName,
+            employeeId: `EMP-${e.id}`,
+            email: e.submittedBy || 'employee@company.com',
+            avatarFallback: initials,
+            department: e.department || 'Engineering',
+            category: e.category || 'General',
+            amount: numAmount,
+            approvedAmount: numAmount,
+            reimbursementAmount: numAmount,
+            currency: e.currency || 'INR',
+            submittedDate: e.createdAt ? e.createdAt.split('T')[0] : '2026-10-07',
+            approvedDate: e.updatedAt ? e.updatedAt.split('T')[0] : (e.createdAt ? e.createdAt.split('T')[0] : '2026-10-07'),
+            approvedBy: e.approvedBy || 'Manager',
+            status: displayStatus,
+            paymentMethod: 'Bank Transfer (NEFT)',
+            paymentReferenceId: isReimbursed ? `TXN-DB-${e.id}` : null,
+            description: e.description || e.title || 'Corporate Expense Claim',
+            merchant: e.title || 'Corporate Vendor',
+            receipt: e.receiptUrl ? {
+              fileName: 'receipt_invoice.pdf',
+              fileSize: '320 KB',
+              uploadedAt: e.createdAt || new Date().toISOString(),
+              fileType: 'pdf',
+            } : null,
+            policyValidation: {
+              isCompliant: true,
+              violations: [],
+              ruleName: 'Standard Expense Policy',
+              notes: 'All mandatory receipts and managerial approvals verified.',
+            },
+            bankDetails: {
+              bankName: 'HDFC Bank',
+              accountNumber: '••••••••4821',
+              ifsc: 'HDFC0001234',
+              upiId: `${empName.toLowerCase()}@okhdfcbank`,
+            },
+            timeline: [
+              {
+                step: 'Claim Submitted',
+                date: e.createdAt || new Date().toISOString(),
+                by: empName,
+                status: 'completed',
+              },
+              {
+                step: 'Manager Approval Granted',
+                date: e.updatedAt || new Date().toISOString(),
+                by: e.approvedBy || 'Manager',
+                status: 'completed',
+              },
+              {
+                step: 'Disbursement & Settlement',
+                date: isReimbursed ? (e.updatedAt || new Date().toISOString()) : null,
+                by: isReimbursed ? 'Finance Disbursed' : 'Pending Settlement',
+                status: isReimbursed ? 'completed' : 'pending',
+              },
+            ],
+          };
+        });
+      }
+
+      const combined = [...dbClaims, ...mockItems];
+      const m = reimbursementMockService.getDashboardMetricsSync();
       const combinedMetrics = { ...m };
-      if (dbClaims.length > 0 && combinedMetrics) {
+      if (dbClaims.length > 0) {
         const dbPending = dbClaims.filter((c) => c.status === 'Approved');
         const dbReimbursed = dbClaims.filter((c) => c.status === 'Reimbursed');
         combinedMetrics.pendingReimbursementCount = (combinedMetrics.pendingReimbursementCount || 0) + dbPending.length;
@@ -354,19 +392,20 @@ export const Reimbursements = () => {
         combinedMetrics.pendingPaymentCount = (combinedMetrics.pendingPaymentCount || 0) + dbPending.length;
       }
 
-      setList([...dbClaims, ...mockItems]);
+      setRawClaims(combined);
       setMetrics(combinedMetrics);
+      memoryClaimsMaster = combined;
+      memoryMetricsMaster = combinedMetrics;
     } catch (e) {
-      console.error(e);
-      toastError('Failed to load reimbursement claims');
+      console.error('Error refreshing reimbursements:', e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, [search, statusFilter, deptFilter, employeeFilter, amountFilter, dateFilter, sortBy, sortOrder, isEmployee, user?.name]);
+    loadData(false);
+  }, []);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -652,9 +691,9 @@ export const Reimbursements = () => {
         </div>
       </div>
 
-      {/* Reimbursement Dashboard Metrics Grid */}
-      {metrics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0">
+      {/* Reimbursement Dashboard Metrics Grid - 0ms Instant Render with Skeleton Fallback */}
+      {metrics ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0 transition-opacity duration-200">
           <Card className="shadow-xs border-border/80">
             <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-4 px-4">
               <CardDescription className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -723,11 +762,17 @@ export const Reimbursements = () => {
             </CardContent>
           </Card>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full min-w-0">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="shadow-xs border-border/80 h-24 bg-muted/40 animate-pulse" />
+          ))}
+        </div>
       )}
 
       {/* Secondary Metrics Bar */}
-      {metrics && (
-        <div className="p-3.5 rounded-xl border border-border/80 bg-muted/30 flex flex-wrap items-center justify-between gap-4 text-xs w-full min-w-0">
+      {metrics ? (
+        <div className="p-3.5 rounded-xl border border-border/80 bg-muted/30 flex flex-wrap items-center justify-between gap-4 text-xs w-full min-w-0 transition-opacity duration-200">
           <div className="flex items-center gap-6">
             <div>
               <span className="text-muted-foreground text-[11px] block">This Month Payouts:</span>
@@ -755,6 +800,8 @@ export const Reimbursements = () => {
             Total Queue: <strong>{metrics.pendingPaymentCount}</strong> claims pending execution
           </div>
         </div>
+      ) : (
+        <div className="h-12 rounded-xl border border-border/80 bg-muted/30 w-full animate-pulse" />
       )}
 
       {/* Datatable & Comprehensive Filter Card */}

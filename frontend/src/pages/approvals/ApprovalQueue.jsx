@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
-import { supabase } from '../../services/supabaseStorage';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import { useAuth } from '../../context/AuthContext';
 import expenseStore from '../../services/expenseStore';
 import {
@@ -169,8 +169,8 @@ export const ApprovalQueue = () => {
           console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
         }
 
-        // Direct Supabase query fallback
-        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+        // Direct Supabase query fallback (only if valid Supabase cloud key is present)
+        if ((!Array.isArray(dbExpenses) || dbExpenses.length === 0) && isSupabaseConfigured()) {
           const { data: supaExpenses, error: supaErr } = await supabase
             .from('expenses')
             .select('*')

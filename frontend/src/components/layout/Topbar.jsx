@@ -127,73 +127,16 @@ export default function Topbar() {
   const [searchFocused, setSearchFocused] = useState(false);
   const searchContainerRef = useRef(null);
 
-  // Notifications State
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      title: "Expense Claim Approved",
-      description: "EXP-2026-081 (₹53,400 - Delta Airlines) approved by Sarah Jenkins.",
-      time: "8 mins ago",
-      unread: true,
-      path: "/expenses",
-      icon: CheckCircle2,
-      color: "text-emerald-500 bg-emerald-500/10",
-    },
-    {
-      id: "notif-2",
-      title: "Budget Threshold Warning",
-      description: "Engineering & Infrastructure budget reached 82.5% of quarterly allocation.",
-      time: "35 mins ago",
-      unread: true,
-      path: "/budgets",
-      icon: AlertTriangle,
-      color: "text-amber-500 bg-amber-500/10",
-    },
-    {
-      id: "notif-3",
-      title: "Duplicate Receipt Flagged",
-      description: "Fraud engine detected matching receipt timestamp on claim EXP-2026-084.",
-      time: "1 hour ago",
-      unread: true,
-      path: "/fraud-detection",
-      icon: ShieldAlert,
-      color: "text-rose-500 bg-rose-500/10",
-    },
-    {
-      id: "notif-4",
-      title: "Card Feed Sync Completed",
-      description: "American Express corporate banking synced 38 new card charges.",
-      time: "2 hours ago",
-      unread: false,
-      path: "/integrations",
-      icon: RefreshCw,
-      color: "text-blue-500 bg-blue-500/10",
-    },
-    {
-      id: "notif-5",
-      title: "Compliance Policy Updated",
-      description: "Policy POL-01 (Mandatory Receipt Requirement) was modified by Admin.",
-      time: "4 hours ago",
-      unread: false,
-      path: "/audit",
-      icon: FileText,
-      color: "text-purple-500 bg-purple-500/10",
-    },
-  ]);
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
-
-  // Filter search results
-  const searchResults = searchQuery.trim()
-    ? searchableItems.filter((item) => {
-        const query = searchQuery.toLowerCase().trim();
-        return (
-          item.title.toLowerCase().includes(query) ||
-          item.subtitle.toLowerCase().includes(query) ||
-          item.type.toLowerCase().includes(query)
-        );
-      })
-    : [];
+  // Memoized search results
+  const searchResults = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase().trim();
+    return searchableItems.filter((item) => (
+      item.title.toLowerCase().includes(query) ||
+      item.subtitle.toLowerCase().includes(query) ||
+      item.type.toLowerCase().includes(query)
+    ));
+  }, [searchQuery]);
 
   // Close search when clicking outside
   useEffect(() => {

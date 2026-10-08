@@ -21,78 +21,87 @@ const saveStore = (data) => {
   }
 };
 
+function filterReimbursementItems(items, filters = {}) {
+  let result = [...items];
+
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    result = result.filter(
+      (i) =>
+        i.id?.toLowerCase().includes(q) ||
+        i.expenseId?.toLowerCase().includes(q) ||
+        i.employeeName?.toLowerCase().includes(q) ||
+        i.employeeId?.toLowerCase().includes(q) ||
+        i.department?.toLowerCase().includes(q) ||
+        i.category?.toLowerCase().includes(q) ||
+        (i.paymentReferenceId && i.paymentReferenceId.toLowerCase().includes(q))
+    );
+  }
+
+  if (filters.status && filters.status !== 'All') {
+    result = result.filter((i) => i.status?.toLowerCase() === filters.status.toLowerCase());
+  }
+
+  if (filters.department && filters.department !== 'All') {
+    result = result.filter((i) => i.department?.toLowerCase() === filters.department.toLowerCase());
+  }
+
+  if (filters.employee && filters.employee !== 'All') {
+    result = result.filter((i) => i.employeeName?.toLowerCase() === filters.employee.toLowerCase());
+  }
+
+  if (filters.amountRange && filters.amountRange !== 'All') {
+    if (filters.amountRange === 'under-2500') result = result.filter((i) => i.amount < 2500);
+    else if (filters.amountRange === '2500-10000') result = result.filter((i) => i.amount >= 2500 && i.amount <= 10000);
+    else if (filters.amountRange === '10000-50000') result = result.filter((i) => i.amount > 10000 && i.amount <= 50000);
+    else if (filters.amountRange === 'over-50000') result = result.filter((i) => i.amount > 50000);
+  }
+
+  if (filters.dateRange && filters.dateRange !== 'All') {
+    if (filters.dateRange === 'this-month') {
+      result = result.filter((i) => i.approvedDate?.startsWith('2026-10'));
+    }
+  }
+
+  if (filters.onlyEmployee) {
+    const target = filters.onlyEmployee.toLowerCase();
+    const selfItems = result.filter(
+      (i) =>
+        i.employeeName?.toLowerCase() === target ||
+        i.employeeId?.toLowerCase() === target ||
+        i.email?.toLowerCase().includes(target)
+    );
+    // If user has specific claims, show them; otherwise fallback to sample claims so view isn't blank
+    if (selfItems.length > 0) {
+      result = selfItems;
+    }
+  }
+
+  if (filters.sortBy) {
+    const field = filters.sortBy;
+    const order = filters.sortOrder === 'desc' ? -1 : 1;
+    result.sort((a, b) => {
+      if (field === 'amount') return (a.amount - b.amount) * order;
+      if (field === 'approvedDate') return (new Date(a.approvedDate) - new Date(b.approvedDate)) * order;
+      if (field === 'employeeName') return (a.employeeName || '').localeCompare(b.employeeName || '') * order;
+      if (field === 'status') return (a.status || '').localeCompare(b.status || '') * order;
+      return 0;
+    });
+  } else {
+    result.sort((a, b) => new Date(b.approvedDate) - new Date(a.approvedDate));
+  }
+
+  return result;
+}
+
 export const reimbursementMockService = {
+  getReimbursementsSync: (filters = {}) => {
+    const items = getStore();
+    return filterReimbursementItems(items, filters);
+  },
+
   getReimbursements: async (filters = {}) => {
-    // Simulate slight network delay for realistic enterprise feel
-    await new Promise((res) => setTimeout(res, 80));
-    let items = getStore();
-
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      items = items.filter(
-        (i) =>
-          i.id.toLowerCase().includes(q) ||
-          i.expenseId.toLowerCase().includes(q) ||
-          i.employeeName.toLowerCase().includes(q) ||
-          i.employeeId.toLowerCase().includes(q) ||
-          i.department.toLowerCase().includes(q) ||
-          i.category.toLowerCase().includes(q) ||
-          (i.paymentReferenceId && i.paymentReferenceId.toLowerCase().includes(q))
-      );
-    }
-
-    if (filters.status && filters.status !== 'All') {
-      items = items.filter((i) => i.status.toLowerCase() === filters.status.toLowerCase());
-    }
-
-    if (filters.department && filters.department !== 'All') {
-      items = items.filter((i) => i.department.toLowerCase() === filters.department.toLowerCase());
-    }
-
-    if (filters.employee && filters.employee !== 'All') {
-      items = items.filter((i) => i.employeeName.toLowerCase() === filters.employee.toLowerCase());
-    }
-
-    if (filters.amountRange && filters.amountRange !== 'All') {
-      if (filters.amountRange === 'under-2500') items = items.filter((i) => i.amount < 2500);
-      else if (filters.amountRange === '2500-10000') items = items.filter((i) => i.amount >= 2500 && i.amount <= 10000);
-      else if (filters.amountRange === '10000-50000') items = items.filter((i) => i.amount > 10000 && i.amount <= 50000);
-      else if (filters.amountRange === 'over-50000') items = items.filter((i) => i.amount > 50000);
-    }
-
-    if (filters.dateRange && filters.dateRange !== 'All') {
-      // Mock simple date filtering
-      if (filters.dateRange === 'this-month') {
-        items = items.filter((i) => i.approvedDate.startsWith('2026-10'));
-      }
-    }
-
-    // Role-based self filter: if restricted to own employee
-    if (filters.onlyEmployee) {
-      items = items.filter(
-        (i) =>
-          i.employeeName.toLowerCase() === filters.onlyEmployee.toLowerCase() ||
-          i.employeeId.toLowerCase() === filters.onlyEmployee.toLowerCase()
-      );
-    }
-
-    // Sort
-    if (filters.sortBy) {
-      const field = filters.sortBy;
-      const order = filters.sortOrder === 'desc' ? -1 : 1;
-      items.sort((a, b) => {
-        if (field === 'amount') return (a.amount - b.amount) * order;
-        if (field === 'approvedDate') return (new Date(a.approvedDate) - new Date(b.approvedDate)) * order;
-        if (field === 'employeeName') return a.employeeName.localeCompare(b.employeeName) * order;
-        if (field === 'status') return a.status.localeCompare(b.status) * order;
-        return 0;
-      });
-    } else {
-      // Default newest approved date first
-      items.sort((a, b) => new Date(b.approvedDate) - new Date(a.approvedDate));
-    }
-
-    return items;
+    return reimbursementMockService.getReimbursementsSync(filters);
   },
 
   getReimbursementById: async (id) => {
@@ -100,7 +109,7 @@ export const reimbursementMockService = {
     return items.find((i) => i.id === id || i.expenseId === id) || null;
   },
 
-  getDashboardMetrics: async () => {
+  getDashboardMetricsSync: () => {
     const items = getStore();
     const approvedExpenses = items.length;
     const pendingItems = items.filter((i) => i.status === 'Pending Reimbursement' || i.status === 'Approved');
@@ -112,7 +121,6 @@ export const reimbursementMockService = {
     const reimbursedTotal = reimbursedItems.reduce((acc, i) => acc + (i.amount || 0), 0);
     const pendingTotal = pendingItems.reduce((acc, i) => acc + (i.amount || 0), 0);
 
-    // This month (Oct 2026)
     const thisMonthReimbursements = items
       .filter((i) => i.approvedDate && i.approvedDate.startsWith('2026-10'))
       .reduce((acc, i) => acc + (i.amount || 0), 0);
@@ -129,6 +137,10 @@ export const reimbursementMockService = {
       thisMonthReimbursementAmount: thisMonthReimbursements,
       pendingPaymentCount: pendingItems.length + processingItems.length,
     };
+  },
+
+  getDashboardMetrics: async () => {
+    return reimbursementMockService.getDashboardMetricsSync();
   },
 
   updateStatus: async (id, newStatus, options = {}) => {

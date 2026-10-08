@@ -30,7 +30,7 @@ import expenseService from '../../services/expenseService';
 import expenseStore from '../../services/expenseStore';
 import { useAuth } from '../../context/AuthContext';
 import { processReceiptImage, formatFileSize } from '../../utils/imageUtils';
-import { uploadReceiptToSupabase, supabase } from '../../services/supabaseStorage';
+import { uploadReceiptToSupabase, supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 
 export const CreateExpense = () => {
   const navigate = useNavigate();
@@ -194,45 +194,15 @@ export const CreateExpense = () => {
       const claimantEmail = user?.email || 'employee@company.com';
       const expenseTitle = formData.title || formData.merchant || 'Expense Claim';
 
-      // 1. Direct Supabase insert (ensures immediate persistence and Supabase status tracking)
+      // 1. Save to Spring Boot backend database first
       let createdDbId = null;
       try {
-        const { data: insertedExpense, error: insertErr } = await supabase
-          .from('expenses')
-          .insert({
-            title: expenseTitle,
-            description: formData.description || '',
-            amount: numAmount,
-            category: formData.category || 'General',
-            department: user?.department || formData.department || 'Engineering',
-            submitted_by: claimantEmail,
-            status: 'PENDING',
-            currency: formData.currency || 'INR',
-            date: formData.date || new Date().toISOString().split('T')[0],
-            receipt_url: finalReceiptUrl,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
-
-        if (insertErr) {
-          console.warn('Supabase expense insert warning:', insertErr);
-        } else if (insertedExpense?.id) {
-          createdDbId = insertedExpense.id;
-        }
-      } catch (dbErr) {
-        console.warn('Supabase expense insert error:', dbErr);
-      }
-
-      // 2. Also notify Spring Boot backend if server is reachable
-      try {
-        await expenseService.createExpense(
+        const savedBackend = await expenseService.createExpense(
           {
             ...formData,
             title: expenseTitle,
             submittedBy: claimantEmail,
-            id: createdDbId || existingDraftId || undefined,
+            id: existingDraftId || undefined,
             status: 'PENDING',
             numericAmount: numAmount,
             amount: numAmount,
@@ -244,8 +214,41 @@ export const CreateExpense = () => {
           },
           user
         );
+        if (savedBackend?.id) {
+          createdDbId = savedBackend.id;
+        }
       } catch (apiErr) {
         console.warn('Backend API createExpense offline/skipped:', apiErr);
+      }
+
+      // 2. Direct Supabase insert (only if Supabase cloud is configured)
+      if (isSupabaseConfigured()) {
+        try {
+          const { data: insertedExpense, error: insertErr } = await supabase
+            .from('expenses')
+            .insert({
+              title: expenseTitle,
+              description: formData.description || '',
+              amount: numAmount,
+              category: formData.category || 'General',
+              department: user?.department || formData.department || 'Engineering',
+              submitted_by: claimantEmail,
+              status: 'PENDING',
+              currency: formData.currency || 'INR',
+              date: formData.date || new Date().toISOString().split('T')[0],
+              receipt_url: finalReceiptUrl,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (!insertErr && insertedExpense?.id && !createdDbId) {
+            createdDbId = insertedExpense.id;
+          }
+        } catch (dbErr) {
+          console.warn('Supabase expense insert error:', dbErr);
+        }
       }
 
       // 3. Keep local store synchronized

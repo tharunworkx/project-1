@@ -62,9 +62,11 @@ public class AuthService {
 
     private void seedUser(String first, String last, String email, String rawPassword, String dept, String role) {
         String normalizedEmail = email.toLowerCase().trim();
+        String fullName = (first + " " + (last != null ? last : "")).trim();
         userRepository.findByEmail(normalizedEmail).ifPresentOrElse(
                 user -> {
                     user.setPassword(passwordEncoder.encode(rawPassword));
+                    user.setName(fullName);
                     user.setFirstName(first);
                     user.setLastName(last);
                     user.setDepartment(dept);
@@ -73,6 +75,7 @@ public class AuthService {
                 },
                 () -> {
                     User user = User.builder()
+                            .name(fullName)
                             .firstName(first)
                             .lastName(last)
                             .email(normalizedEmail)
@@ -91,9 +94,17 @@ public class AuthService {
             throw new IllegalArgumentException("User with email " + email + " already exists");
         }
 
+        String firstName = request.getFirstName();
+        String lastName = request.getLastName();
+        String fullName = (request.getName() != null && !request.getName().isBlank())
+                ? request.getName().trim()
+                : (firstName + " " + (lastName != null ? lastName : "")).trim();
+        if (fullName.isEmpty()) fullName = "User";
+
         User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
+                .name(fullName)
+                .firstName(firstName)
+                .lastName(lastName)
                 .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .department(request.getDepartment() != null ? request.getDepartment() : "General")
@@ -107,7 +118,7 @@ public class AuthService {
 
         Map<String, Object> userMap = new HashMap<>();
         userMap.put("id", "usr_" + user.getId());
-        userMap.put("name", user.getFirstName() + " " + user.getLastName());
+        userMap.put("name", user.getName() != null ? user.getName() : (user.getFirstName() + " " + user.getLastName()));
         userMap.put("email", user.getEmail());
         userMap.put("role", user.getRole());
         userMap.put("department", user.getDepartment());
@@ -139,7 +150,7 @@ public class AuthService {
 
         Map<String, Object> userMap = new HashMap<>();
         userMap.put("id", "usr_" + user.getId());
-        userMap.put("name", user.getFirstName() + " " + user.getLastName());
+        userMap.put("name", user.getName() != null ? user.getName() : (user.getFirstName() + " " + user.getLastName()));
         userMap.put("email", user.getEmail());
         userMap.put("role", user.getRole());
         userMap.put("department", user.getDepartment());

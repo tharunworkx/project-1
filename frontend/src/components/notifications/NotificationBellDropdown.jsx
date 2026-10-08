@@ -77,7 +77,7 @@ export const NotificationBellDropdown = () => {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 10000);
+    const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
 
