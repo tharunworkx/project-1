@@ -328,47 +328,44 @@ export default function FraudDetection() {
 
       {/* Tabs Filter Bar & Search */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border">
-          <Button
-            variant={activeTab === 'ALL' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('ALL')}
-            className="text-xs h-8 rounded-lg cursor-pointer"
-          >
-            All Flags ({mockFraudFlags.length})
-          </Button>
-          <Button
-            variant={activeTab === 'DUPLICATE_RECEIPT' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('DUPLICATE_RECEIPT')}
-            className="text-xs h-8 rounded-lg cursor-pointer"
-          >
-            Duplicate Receipts
-          </Button>
-          <Button
-            variant={activeTab === 'DUPLICATE_EXPENSE' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('DUPLICATE_EXPENSE')}
-            className="text-xs h-8 rounded-lg cursor-pointer"
-          >
-            Duplicate Expenses
-          </Button>
-          <Button
-            variant={activeTab === 'UNUSUAL_SPENDING' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('UNUSUAL_SPENDING')}
-            className="text-xs h-8 rounded-lg cursor-pointer"
-          >
-            Unusual Spending
-          </Button>
-          <Button
-            variant={activeTab === 'SUSPICIOUS' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setActiveTab('SUSPICIOUS')}
-            className="text-xs h-8 rounded-lg cursor-pointer"
-          >
-            Split / Suspicious
-          </Button>
+        {/* Horizontally scrollable pill tabs on mobile & tablet, ensuring distinct card structure */}
+        <div className="w-full md:w-auto overflow-x-auto no-scrollbar pb-1 -mb-1">
+          <div className="flex items-center gap-2 p-1.5 bg-muted/40 dark:bg-zinc-900/60 rounded-xl border border-border w-max min-w-full md:min-w-0">
+            {[
+              { id: 'ALL', label: 'All Flags', icon: Layers, count: mockFraudFlags.length },
+              { id: 'DUPLICATE_RECEIPT', label: 'Duplicate Receipts', icon: Copy, count: mockFraudFlags.filter((f) => f.type === 'DUPLICATE_RECEIPT').length },
+              { id: 'DUPLICATE_EXPENSE', label: 'Duplicate Expenses', icon: Receipt, count: mockFraudFlags.filter((f) => f.type === 'DUPLICATE_EXPENSE').length },
+              { id: 'UNUSUAL_SPENDING', label: 'Unusual Spending', icon: TrendingUp, count: mockFraudFlags.filter((f) => f.type === 'UNUSUAL_SPENDING').length },
+              { id: 'SUSPICIOUS', label: 'Split / Suspicious', icon: AlertTriangle, count: mockFraudFlags.filter((f) => f.type === 'SPLIT_TRANSACTION' || f.type === 'SUSPICIOUS_TRANSACTION').length },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-lg shrink-0 transition-all cursor-pointer border whitespace-nowrap ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
+                      : 'bg-card/90 dark:bg-zinc-800/80 text-muted-foreground hover:text-foreground hover:bg-muted border-border/80 shadow-2xs'
+                  }`}
+                >
+                  <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                  <span>{tab.label}</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none ${
+                      isActive
+                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                        : 'bg-muted text-muted-foreground border border-border/50'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="relative w-full md:w-72">

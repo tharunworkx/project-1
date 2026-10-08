@@ -121,29 +121,38 @@ export const Users = () => {
   });
 
   const loadUsers = async () => {
-    let finalUsers = [];
+    let supaUsersList = [];
     try {
-      const dbUsers = await userService.getUsers();
-      if (Array.isArray(dbUsers) && dbUsers.length > 0) {
-        finalUsers = dbUsers;
+      const { data: supaUsers, error: supaErr } = await supabase
+        .from('users')
+        .select('*')
+        .order('id', { ascending: false });
+      if (!supaErr && Array.isArray(supaUsers)) {
+        supaUsersList = supaUsers;
       }
-    } catch (err) {
-      console.warn('Backend unavailable, fetching users directly from Supabase:', err);
+    } catch (supaErr) {
+      console.warn('Could not fetch users directly from Supabase:', supaErr);
     }
 
-    if (finalUsers.length === 0) {
-      try {
-        const { data: supaUsers } = await supabase
-          .from('users')
-          .select('*')
-          .order('id', { ascending: false });
-        if (Array.isArray(supaUsers)) {
-          finalUsers = supaUsers;
-        }
-      } catch (supaErr) {
-        console.warn('Could not fetch from Supabase:', supaErr);
+    let backendUsersList = [];
+    try {
+      const dbUsers = await userService.getUsers();
+      if (Array.isArray(dbUsers)) {
+        backendUsersList = dbUsers;
       }
+    } catch (err) {
+      // Backend optional / offline
     }
+
+    // Authoritative merge: Supabase users take priority for registrations & approvals
+    const userMap = new Map();
+    for (const u of backendUsersList) {
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+    }
+    for (const u of supaUsersList) {
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+    }
+    const finalUsers = Array.from(userMap.values());
 
     const mapped = finalUsers.map((u) => {
       const fullName = `${u.firstName || u.first_name || ''} ${u.lastName || u.last_name || ''}`.trim() || u.name || u.email.split('@')[0];

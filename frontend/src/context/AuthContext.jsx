@@ -130,17 +130,9 @@ export const AuthProvider = ({ children }) => {
           return data.user;
         }
       } catch (backendErr) {
-        const errMsg = typeof backendErr === 'string' ? backendErr : backendErr?.message || '';
-        // If backend explicitly rejected invalid credentials, fail immediately
-        if (
-          errMsg.toLowerCase().includes('bad credentials') ||
-          errMsg.toLowerCase().includes('invalid') ||
-          errMsg.toLowerCase().includes('not found') ||
-          errMsg.toLowerCase().includes('unauthorized')
-        ) {
-          throw 'Invalid email or password. Please verify your credentials.';
-        }
-        // If backend is unreachable (e.g. on hosted Vercel site), fall through to Supabase query
+        // Backend might be offline or user registered directly via Supabase.
+        // Fall through to authoritative Supabase verification.
+        console.warn('Backend login unavailable or unmapped, checking Supabase:', backendErr);
       }
 
       // 2. Query Supabase directly (ensures deleted users CANNOT log in)

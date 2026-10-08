@@ -45,6 +45,7 @@ import {
 import { cn } from "cn";
 
 import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../services/supabaseStorage";
 
 function CollapsibleNavItem({ item, location }) {
   const { state, setOpen } = useSidebar();
@@ -149,13 +150,18 @@ function CollapsibleNavItem({ item, location }) {
                     }
                   }}
                   className={cn(
-                    "block py-1 text-xs transition-colors truncate",
+                    "flex items-center justify-between py-1 text-xs transition-colors truncate",
                     isSubActive
                       ? "text-blue-600 font-semibold dark:text-blue-400"
                       : "text-zinc-600 hover:text-zinc-950 font-normal dark:text-zinc-400 dark:hover:text-zinc-200"
                   )}
                 >
-                  {subItem.label}
+                  <span className="truncate">{subItem.label}</span>
+                  {subItem.badge && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white shrink-0 ml-1">
+                      {subItem.badge}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}
@@ -169,11 +175,18 @@ function CollapsibleNavItem({ item, location }) {
           onClick={() => setIsOpen(true)}
           className="w-full justify-between font-medium cursor-pointer h-10 rounded-xl px-3 hover:bg-zinc-200/60 text-zinc-800 hover:text-zinc-950 dark:hover:bg-zinc-800/60 dark:text-zinc-300 dark:hover:text-white"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <Icon className="size-4.5 shrink-0" />
-            <span>{item.label}</span>
+            <span className="truncate">{item.label}</span>
           </div>
-          <ChevronRight className="ml-auto size-4 text-zinc-500 dark:text-zinc-400" />
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
+            {item.badge && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                {item.badge}
+              </span>
+            )}
+            <ChevronRight className="size-4 text-zinc-500 dark:text-zinc-400" />
+          </div>
         </SidebarMenuButton>
       )}
     </SidebarMenuItem>
@@ -211,6 +224,24 @@ export function AppSidebar({ ...props }) {
   const isFinanceTeam = isFinanceExec || isCFO || isAdmin;
   const isManager = roleLower.includes("manager") || isCFO || isAdmin;
   const isEmployee = !isManager && !isFinanceTeam && !isAdmin;
+
+  const [pendingUsersCount, setPendingUsersCount] = React.useState(0);
+  React.useEffect(() => {
+    async function checkPending() {
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('id, role');
+        if (Array.isArray(data)) {
+          const count = data.filter((u) => typeof u.role === 'string' && u.role.startsWith('PENDING:')).length;
+          setPendingUsersCount(count);
+        }
+      } catch (e) {}
+    }
+    checkPending();
+    const interval = setInterval(checkPending, 12000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navGroups = [
     {
@@ -271,8 +302,13 @@ export function AppSidebar({ ...props }) {
         {
           label: "Organization",
           icon: Building2,
+          badge: (isAdmin || isManager) && pendingUsersCount > 0 ? `${pendingUsersCount}` : undefined,
           childItems: [
-            { label: "Users & Teams", href: "/admin/users" },
+            {
+              label: "Users & Teams",
+              href: "/admin/users",
+              badge: (isAdmin || isManager) && pendingUsersCount > 0 ? `${pendingUsersCount}` : undefined,
+            },
             { label: "Departments", href: "/admin/departments" },
             { label: "Projects", href: "/admin/projects" },
           ],

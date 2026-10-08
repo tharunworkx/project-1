@@ -1,4 +1,5 @@
 import { mockNotificationsData } from './financeMockData';
+import { supabase } from '../supabaseStorage';
 
 const NOTIFS_STORAGE_KEY = 'ems_person3_notifications';
 const PREFS_STORAGE_KEY = 'ems_person3_notification_preferences';
@@ -32,10 +33,58 @@ const saveStore = (data) => {
   }
 };
 
+/**
+ * Fetch real-time pending account registration requests directly from Supabase
+ * Ensures any admin on any device (laptop, desktop, mobile, tablet) sees new signups immediately.
+ */
+export const getPendingUserNotifications = async () => {
+  try {
+    const { data: supaUsers, error } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, role, department, created_at')
+      .order('id', { ascending: false });
+
+    if (!error && Array.isArray(supaUsers)) {
+      return supaUsers
+        .filter((u) => typeof u.role === 'string' && u.role.startsWith('PENDING:'))
+        .map((u) => {
+          const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email.split('@')[0];
+          const cleanRole = u.role.replace('PENDING:', '').trim();
+          return {
+            id: `pending_reg_${u.id}`,
+            userId: u.id,
+            userEmail: u.email,
+            fullName,
+            requestedRole: cleanRole,
+            department: u.department || 'General',
+            title: 'New Account Approval Request',
+            message: `${fullName} (${u.email}) requested registration as ${cleanRole} in ${u.department || 'the team'}. Administrator approval required before login.`,
+            type: 'Approval Pending',
+            relatedModule: 'System',
+            link: '/admin/users',
+            path: '/admin/users',
+            isPendingUserApproval: true,
+            isRead: false,
+            priority: 'high',
+            createdAt: u.created_at || new Date().toISOString(),
+            time: 'Action Required',
+          };
+        });
+    }
+  } catch (err) {
+    console.warn('Could not query pending registrations from Supabase:', err);
+  }
+  return [];
+};
+
 export const notificationMockService = {
   getNotifications: async (filter = 'All') => {
     await new Promise((res) => setTimeout(res, 40));
-    let items = getStore();
+    const pendingNotifs = await getPendingUserNotifications();
+    const localItems = getStore();
+
+    // Prepend pending registration requests so admins see them first
+    let items = [...pendingNotifs, ...localItems];
 
     if (filter === 'Unread') {
       items = items.filter((n) => !n.isRead);
@@ -47,8 +96,19 @@ export const notificationMockService = {
   },
 
   getUnreadCount: async () => {
+    const pendingNotifs = await getPendingUserNotifications();
     const items = getStore();
-    return items.filter((n) => !n.isRead).length;
+    return pendingNotifs.length + items.filter((n) => !n.isRead).length;
+  },
+
+  approveUserRegistration: async (userId, targetRole) => {
+    const cleanRole = targetRole || 'Employee';
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('users')
+      .update({ role: cleanRole, updated_at: now })
+      .eq('id', userId);
+    return { success: !error, error };
   },
 
   markAsRead: async (id) => {

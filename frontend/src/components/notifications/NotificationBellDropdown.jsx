@@ -14,6 +14,8 @@ import {
   ShieldAlert,
   Info,
   Clock,
+  Check,
+  UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +33,9 @@ import { useToast } from '@/context/ToastContext';
 
 const getNotifIcon = (type) => {
   const t = (type || '').toLowerCase();
+  if (t.includes('approval pending') || t.includes('registration')) {
+    return <UserCheck className="size-4 text-amber-600 dark:text-amber-400" />;
+  }
   if (t.includes('reimbursement processed')) {
     return <CreditCard className="size-4 text-emerald-600" />;
   }
@@ -55,9 +60,6 @@ const getNotifIcon = (type) => {
   if (t.includes('report generated')) {
     return <FileText className="size-4 text-blue-600" />;
   }
-  if (t.includes('approval pending')) {
-    return <Clock className="size-4 text-indigo-600" />;
-  }
   return <Info className="size-4 text-primary" />;
 };
 
@@ -65,19 +67,20 @@ export const NotificationBellDropdown = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [approvingId, setApprovingId] = useState(null);
   const navigate = useNavigate();
-  const { toastSuccess } = useToast();
+  const { toastSuccess, toastError } = useToast();
 
   const loadNotifications = async () => {
     const list = await notificationMockService.getNotifications();
-    setNotifications(list.slice(0, 5)); // show latest 5 in dropdown
+    setNotifications(list.slice(0, 6)); // show latest 6 in dropdown
     const count = await notificationMockService.getUnreadCount();
     setUnreadCount(count);
   };
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 10000);
+    const interval = setInterval(loadNotifications, 8000);
     return () => clearInterval(interval);
   }, []);
 
@@ -92,6 +95,25 @@ export const NotificationBellDropdown = () => {
     await notificationMockService.markAllAsRead();
     loadNotifications();
     toastSuccess('All notifications marked as read', 'Notifications');
+  };
+
+  const handleQuickApprove = async (e, item) => {
+    e.stopPropagation();
+    try {
+      setApprovingId(item.id);
+      const res = await notificationMockService.approveUserRegistration(item.userId, item.requestedRole);
+      if (res.success) {
+        toastSuccess(`Registration approved for ${item.userEmail}! User can now log in as ${item.requestedRole}.`, 'User Approved');
+        loadNotifications();
+      } else {
+        toastError('Failed to approve registration: ' + (res.error?.message || 'Database error'), 'Approval Failed');
+      }
+    } catch (err) {
+      console.error('Approve error:', err);
+      toastError('Could not approve registration', 'Error');
+    } finally {
+      setApprovingId(null);
+    }
   };
 
   const handleOpenItem = (item) => {
@@ -160,40 +182,69 @@ export const NotificationBellDropdown = () => {
                 key={n.id}
                 onClick={() => handleOpenItem(n)}
                 className={`p-3.5 flex items-start gap-3 hover:bg-muted/50 transition-colors cursor-pointer text-xs ${
-                  !n.isRead ? 'bg-primary/5 dark:bg-primary/10' : ''
+                  n.isPendingUserApproval
+                    ? 'bg-amber-500/10 dark:bg-amber-500/5 border-l-2 border-l-amber-500'
+                    : !n.isRead ? 'bg-primary/5 dark:bg-primary/10' : ''
                 }`}
               >
-                <div className="p-2 rounded-lg bg-card border border-border/80 shrink-0 mt-0.5 shadow-2xs">
+                <div className={`p-2 rounded-lg border shrink-0 mt-0.5 shadow-2xs ${
+                  n.isPendingUserApproval
+                    ? 'bg-amber-500/20 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                    : 'bg-card border-border/80'
+                }`}>
                   {getNotifIcon(n.type)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1.5 mb-0.5">
                     <span className="font-semibold text-foreground truncate">{n.title}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{n.timestamp}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{n.timestamp || n.time}</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
                     {n.message}
                   </p>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal">
-                      {n.relatedModule}
-                    </Badge>
-                    {n.priority === 'High' && (
-                      <Badge className="bg-rose-500/10 text-rose-600 text-[9px] px-1 py-0 font-semibold">
-                        High Priority
-                      </Badge>
-                    )}
-                    {!n.isRead && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleMarkAsRead(e, n.id)}
-                        className="text-[10px] text-primary hover:underline ml-auto font-medium"
+                  
+                  {n.isPendingUserApproval ? (
+                    <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-amber-500/20">
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[9px] px-1.5 py-0 font-semibold">
+                          {n.requestedRole}
+                        </Badge>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal">
+                          {n.department}
+                        </Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        disabled={approvingId === n.id}
+                        onClick={(e) => handleQuickApprove(e, n)}
+                        className="h-6 px-2 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-xs gap-1 cursor-pointer"
                       >
-                        Mark read
-                      </button>
-                    )}
-                  </div>
+                        <Check className="size-3 stroke-[2.5]" />
+                        <span>{approvingId === n.id ? 'Approving...' : 'Approve'}</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal">
+                        {n.relatedModule}
+                      </Badge>
+                      {n.priority === 'High' && (
+                        <Badge className="bg-rose-500/10 text-rose-600 text-[9px] px-1 py-0 font-semibold">
+                          High Priority
+                        </Badge>
+                      )}
+                      {!n.isRead && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkAsRead(e, n.id)}
+                          className="text-[10px] text-primary hover:underline ml-auto font-medium"
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))

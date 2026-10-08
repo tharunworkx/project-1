@@ -19,6 +19,8 @@ import {
   Mail,
   Sliders,
   RotateCcw,
+  Check,
+  UserCheck,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +72,25 @@ export const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState(null);
+  const [approvingId, setApprovingId] = useState(null);
+
+  const handleQuickApprove = async (item) => {
+    try {
+      setApprovingId(item.id);
+      const res = await notificationMockService.approveUserRegistration(item.userId, item.requestedRole);
+      if (res.success) {
+        toastSuccess(`Registration approved for ${item.userEmail}! User can now log in as ${item.requestedRole}.`, 'User Approved');
+        loadNotifications();
+      } else {
+        toastInfo('Failed to approve registration: ' + (res.error?.message || 'Database error'));
+      }
+    } catch (err) {
+      console.error('Approve error:', err);
+      toastInfo('Could not approve registration');
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -305,6 +326,18 @@ export const Notifications = () => {
 
                     {/* Actions on Item */}
                     <div className="flex items-center gap-2 sm:self-center shrink-0 pt-2 sm:pt-0">
+                      {n.isPendingUserApproval && (
+                        <Button
+                          size="sm"
+                          disabled={approvingId === n.id}
+                          onClick={() => handleQuickApprove(n)}
+                          className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <Check className="size-3.5 stroke-[2.5]" />
+                          <span>{approvingId === n.id ? 'Approving...' : 'Approve Access'}</span>
+                        </Button>
+                      )}
+
                       {n.link && (
                         <Button
                           variant="outline"
@@ -312,7 +345,7 @@ export const Notifications = () => {
                           className="h-7 text-xs gap-1 cursor-pointer"
                           onClick={() => handleOpenRecord(n)}
                         >
-                          <span>Open Record</span>
+                          <span>{n.isPendingUserApproval ? 'Review in Users' : 'Open Record'}</span>
                           <ExternalLink className="size-3" />
                         </Button>
                       )}

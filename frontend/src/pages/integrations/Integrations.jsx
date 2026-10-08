@@ -233,42 +233,33 @@ export default function Integrations() {
       )}
 
       {/* Categories Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border w-fit">
-        <Button
-          variant={activeCategory === 'ALL' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveCategory('ALL')}
-          className="text-xs h-8 rounded-lg cursor-pointer"
-        >
-          All Integrations ({mockIntegrations.length})
-        </Button>
-        <Button
-          variant={activeCategory === 'CARD' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveCategory('CARD')}
-          className="text-xs h-8 rounded-lg cursor-pointer gap-1.5"
-        >
-          <CreditCard className="size-3.5" />
-          <span>Corporate Cards</span>
-        </Button>
-        <Button
-          variant={activeCategory === 'ERP' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveCategory('ERP')}
-          className="text-xs h-8 rounded-lg cursor-pointer gap-1.5"
-        >
-          <Building className="size-3.5" />
-          <span>Accounting & ERP</span>
-        </Button>
-        <Button
-          variant={activeCategory === 'EMAIL' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveCategory('EMAIL')}
-          className="text-xs h-8 rounded-lg cursor-pointer gap-1.5"
-        >
-          <Mail className="size-3.5" />
-          <span>Email & Inboxes</span>
-        </Button>
+      <div className="w-full overflow-x-auto no-scrollbar pb-1 -mb-1">
+        <div className="flex items-center gap-2 p-1.5 bg-muted/40 dark:bg-zinc-900/60 rounded-xl border border-border w-max min-w-full sm:min-w-0">
+          {[
+            { id: 'ALL', label: `All Integrations (${mockIntegrations.length})`, icon: null },
+            { id: 'CARD', label: 'Corporate Cards', icon: CreditCard },
+            { id: 'ERP', label: 'Accounting & ERP', icon: Building },
+            { id: 'EMAIL', label: 'Email & Inboxes', icon: Mail },
+          ].map((cat) => {
+            const Icon = cat.icon;
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setActiveCategory(cat.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg shrink-0 transition-all cursor-pointer border whitespace-nowrap ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
+                    : 'bg-card/90 dark:bg-zinc-800/80 text-muted-foreground hover:text-foreground hover:bg-muted border-border/80 shadow-2xs'
+                }`}
+              >
+                {Icon && <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />}
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Integrations Grid */}
