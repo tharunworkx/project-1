@@ -71,8 +71,10 @@ function CollapsibleNavItem({ item, location }) {
               tooltip={item.label}
               isActive={isAnyChildActive}
               className={cn(
-                "size-9! p-0! justify-center! mx-auto! rounded-lg cursor-pointer transition-colors",
-                isAnyChildActive ? "bg-zinc-800 text-white font-semibold" : "hover:bg-zinc-800/60"
+                "size-9! p-0! justify-center! mx-auto! rounded-lg cursor-pointer transition-colors bg-transparent!",
+                isAnyChildActive
+                  ? "text-blue-600 dark:text-blue-400 font-semibold bg-transparent!"
+                  : "text-zinc-700 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200/40 dark:hover:bg-zinc-800/40 bg-transparent!"
               )}
             >
               <Icon className="size-4.5 shrink-0" />
@@ -128,7 +130,7 @@ function CollapsibleNavItem({ item, location }) {
             type="button"
             onClick={() => setIsOpen(!isOpen)}
             title={`Toggle ${item.label}`}
-            className="size-9 rounded-lg p-0 flex items-center justify-center shrink-0 bg-zinc-200 text-zinc-800 hover:bg-zinc-300/80 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+            className="size-9 rounded-lg p-0 flex items-center justify-center shrink-0 text-zinc-700 hover:text-foreground hover:bg-zinc-200/50 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50 bg-transparent transition-colors cursor-pointer"
           >
             <Icon className="size-4.5" />
           </button>
@@ -355,14 +357,14 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
-      {/* 1. Header: Toggle button matching laptop view */}
+      {/* 1. Header: Toggle button matching laptop view with no box background */}
       <SidebarHeader className="p-3 pb-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-2.5 group-data-[collapsible=icon]:h-14 border-none flex flex-row items-center justify-start group-data-[collapsible=icon]:justify-center overflow-hidden">
         <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center w-full shrink-0">
           <button
             type="button"
             onClick={toggleSidebar}
             title={open ? "Collapse sidebar" : "Expand sidebar"}
-            className="size-9 rounded-xl bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-black dark:hover:bg-zinc-100 dark:border-white shadow-xs flex items-center justify-center transition-colors cursor-pointer group-data-[collapsible=icon]:mx-auto"
+            className="size-9 rounded-xl text-zinc-700 hover:text-foreground hover:bg-zinc-200/50 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50 flex items-center justify-center transition-colors cursor-pointer group-data-[collapsible=icon]:mx-auto bg-transparent border-none shadow-none"
           >
             {open ? (
               <PanelLeftClose className="size-4.5 stroke-[2]" />
@@ -409,9 +411,9 @@ export function AppSidebar({ ...props }) {
                         isActive={isActive}
                         className={cn(
                           isActive
-                            ? "bg-zinc-200 text-zinc-900 font-semibold shadow-xs dark:bg-zinc-800 dark:text-white"
-                            : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-200/60 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50",
-                          "h-10 rounded-xl px-3 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto!"
+                            ? "text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/50 dark:bg-blue-950/20 group-data-[collapsible=icon]:bg-transparent! group-data-[collapsible=icon]:text-blue-600! dark:group-data-[collapsible=icon]:text-blue-400!"
+                            : "text-zinc-700 hover:text-zinc-950 hover:bg-zinc-200/40 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/40 group-data-[collapsible=icon]:bg-transparent!",
+                          "h-10 rounded-xl px-3 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto! group-data-[collapsible=icon]:bg-transparent! group-data-[collapsible=icon]:shadow-none!"
                         )}
                       >
                         <NavLink
