@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ExternalLink,
   Trash2,
+  PanelLeftOpen,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -43,6 +44,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ModeToggle from "./ModeToggle";
 import { useAuth } from "../../context/AuthContext";
+import { useSidebar } from "@/components/ui/sidebar";
 import NotificationBellDropdown from "../notifications/NotificationBellDropdown";
 
 const routeNames = {
@@ -119,6 +121,7 @@ export default function Topbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { open, toggleSidebar } = useSidebar();
   const currentTitle = routeNames[location.pathname] || "Dashboard";
 
   // Search State
@@ -249,8 +252,17 @@ export default function Topbar() {
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-border/80 bg-card flex items-center shadow-xs">
       <div className="flex size-full items-center justify-between px-4 sm:px-6">
-        {/* Left side: Clean Section Title matching laptop view */}
-        <div className="flex items-center gap-3">
+        {/* Left side: Clean Section Title with Mobile Menu Toggle */}
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title={open ? "Close menu" : "Open menu"}
+            className="md:hidden size-9 rounded-xl flex items-center justify-center text-zinc-700 hover:text-foreground hover:bg-zinc-200/50 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50 transition-colors cursor-pointer shrink-0"
+            aria-label="Toggle Navigation Menu"
+          >
+            <PanelLeftOpen className="size-5 stroke-[2]" />
+          </button>
           <h1 className="text-sm sm:text-base font-semibold text-foreground tracking-tight truncate">
             {currentTitle}
           </h1>
