@@ -20,7 +20,6 @@ import {
   ExternalLink,
   Trash2,
 } from "lucide-react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -250,9 +249,8 @@ export default function Topbar() {
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-border/80 bg-card flex items-center shadow-xs">
       <div className="flex size-full items-center justify-between px-4 sm:px-6">
-        {/* Left side: Mobile trigger and Clean Section Title */}
+        {/* Left side: Clean Section Title matching laptop view */}
         <div className="flex items-center gap-3">
-          <SidebarTrigger className="lg:hidden size-9 flex items-center justify-center rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs [&_svg]:size-4.5" />
           <h1 className="text-sm sm:text-base font-semibold text-foreground tracking-tight truncate">
             {currentTitle}
           </h1>

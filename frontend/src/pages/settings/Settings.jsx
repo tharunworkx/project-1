@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Save,
   User,
@@ -21,6 +21,8 @@ import { useAuth } from '../../context/AuthContext';
 export const Settings = () => {
   const { user, updateUser } = useAuth();
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || 'Alex Morgan',
     email: user?.email || 'alex.morgan@company.com',
@@ -51,16 +53,23 @@ export const Settings = () => {
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    setSuccess('');
+    setError('');
+    setIsSaving(true);
     try {
       await updateUser({
         name: formData.name,
         email: formData.email,
         department: formData.department,
       });
-      setSuccess('Settings and profile name saved successfully to Supabase.');
+      setSuccess('Profile name and settings updated permanently to Supabase.');
       setTimeout(() => setSuccess(''), 4000);
     } catch (err) {
       console.error('Settings save error:', err);
+      setError(typeof err === 'string' ? err : err?.message || 'Failed to update profile. Please try again.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -79,10 +88,11 @@ export const Settings = () => {
 
         <Button
           onClick={handleSubmit}
-          className="gap-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-4 py-2"
+          disabled={isSaving}
+          className="gap-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-4 py-2 cursor-pointer"
         >
           <Save className="size-3.5" />
-          <span>Save Changes</span>
+          <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
         </Button>
       </div>
 
@@ -91,6 +101,13 @@ export const Settings = () => {
         <div className="flex items-center gap-2 p-3 text-xs font-semibold rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 animate-in fade-in">
           <CheckCircle2 className="size-4" />
           <span>{success}</span>
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 text-xs font-semibold rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 animate-in fade-in">
+          <span>{error}</span>
         </div>
       )}
 

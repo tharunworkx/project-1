@@ -47,7 +47,7 @@ import { cn } from "cn";
 import { useAuth } from "../../context/AuthContext";
 
 function CollapsibleNavItem({ item, location }) {
-  const { state, isMobile, setOpenMobile } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isAnyChildActive = item.childItems?.some(
     (sub) => location.pathname === sub.href
@@ -95,7 +95,9 @@ function CollapsibleNavItem({ item, location }) {
                     <NavLink
                       to={subItem.href}
                       onClick={() => {
-                        if (isMobile) setOpenMobile(false);
+                        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                          setOpen(false);
+                        }
                       }}
                       className={cn(
                         "flex items-center w-full px-2.5 py-1.5 text-xs rounded-lg transition-colors font-medium",
@@ -140,7 +142,9 @@ function CollapsibleNavItem({ item, location }) {
                   key={subItem.label}
                   to={subItem.href}
                   onClick={() => {
-                    if (isMobile) setOpenMobile(false);
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                      setOpen(false);
+                    }
                   }}
                   className={cn(
                     "block py-1 text-xs transition-colors truncate",
@@ -176,15 +180,19 @@ function CollapsibleNavItem({ item, location }) {
 
 export function AppSidebar({ ...props }) {
   const location = useLocation();
-  const { open, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+  const { open, toggleSidebar, setOpen } = useSidebar();
   const { user } = useAuth();
 
-  // Automatically close the sidebar menu after selecting any section in mobile or tab view
+  // Collapse menu bar to icon view after selecting a new section in mobile or tab view (< 1024px)
+  const prevPathRef = React.useRef(location.pathname);
   React.useEffect(() => {
-    if (isMobile) {
-      setOpenMobile(false);
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        setOpen(false);
+      }
     }
-  }, [location.pathname, isMobile, setOpenMobile]);
+  }, [location.pathname, setOpen]);
 
   const roleName = user?.role || "Employee";
   const roleLower = roleName.toLowerCase();
@@ -347,28 +355,16 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
-      {/* 1. Header: Toggle / Close button */}
+      {/* 1. Header: Toggle button matching laptop view */}
       <SidebarHeader className="p-3 pb-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-2.5 group-data-[collapsible=icon]:h-14 border-none flex flex-row items-center justify-start group-data-[collapsible=icon]:justify-center overflow-hidden">
-        <div className="flex items-center justify-between group-data-[collapsible=icon]:justify-center w-full shrink-0">
-          {isMobile && (
-            <div className="flex items-center gap-2 pl-1">
-              <div className="size-7 rounded-lg bg-black text-white dark:bg-white dark:text-zinc-950 font-bold text-xs flex items-center justify-center">
-                E
-              </div>
-              <span className="font-bold text-xs tracking-tight text-foreground">
-                Expense Hub
-              </span>
-            </div>
-          )}
+        <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center w-full shrink-0">
           <button
             type="button"
             onClick={toggleSidebar}
-            title={isMobile ? "Close menu" : open ? "Collapse sidebar" : "Expand sidebar"}
+            title={open ? "Collapse sidebar" : "Expand sidebar"}
             className="size-9 rounded-xl bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-black dark:hover:bg-zinc-100 dark:border-white shadow-xs flex items-center justify-center transition-colors cursor-pointer group-data-[collapsible=icon]:mx-auto"
           >
-            {isMobile ? (
-              <X className="size-4.5 stroke-[2]" />
-            ) : open ? (
+            {open ? (
               <PanelLeftClose className="size-4.5 stroke-[2]" />
             ) : (
               <PanelLeftOpen className="size-4.5 stroke-[2]" />
@@ -421,7 +417,9 @@ export function AppSidebar({ ...props }) {
                         <NavLink
                           to={item.href}
                           onClick={() => {
-                            if (isMobile) setOpenMobile(false);
+                            if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                              setOpen(false);
+                            }
                           }}
                           className="flex items-center justify-start group-data-[collapsible=icon]:justify-center size-full"
                         >

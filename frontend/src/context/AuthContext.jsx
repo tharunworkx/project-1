@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import bcrypt from 'bcryptjs';
 import authService from '../services/authService';
+import userService from '../services/userService';
 import { supabase } from '../services/supabaseStorage';
 import notificationMockService from '../services/mock/notificationMockService';
 
@@ -97,6 +98,33 @@ export const AuthProvider = ({ children }) => {
       try {
         const data = await authService.login({ email: normalizedEmail, password });
         if (data?.user) {
+          // Synchronize with Supabase users table to ensure fresh name & role
+          try {
+            const { data: dbUser } = await supabase
+              .from('users')
+              .select('id, email, role, department, first_name, last_name')
+              .eq('email', normalizedEmail)
+              .maybeSingle();
+
+            if (dbUser) {
+              const fullName = [dbUser.first_name, dbUser.last_name].filter(Boolean).join(' ') || data.user.name;
+              const sessionUser = {
+                ...data.user,
+                id: dbUser.id,
+                name: fullName,
+                email: dbUser.email || data.user.email,
+                role: dbUser.role || data.user.role,
+                department: dbUser.department || data.user.department,
+                avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+              };
+              setUser(sessionUser);
+              setToken(data.token || `token_${Date.now()}`);
+              return sessionUser;
+            }
+          } catch (syncErr) {
+            console.warn('Supabase post-login sync warning:', syncErr);
+          }
+
           setUser(data.user);
           setToken(data.token || `token_${Date.now()}`);
           return data.user;
@@ -288,32 +316,94 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(updatedUser));
 
     // Persist changes directly into Supabase so re-logging in keeps the updated name
+    const currentEmail = (user?.email || '').toLowerCase().trim();
+    const targetEmail = (data.email || currentEmail).toLowerCase().trim();
+    const rawId = data.id || user?.id;
+    let numericId = null;
+    if (typeof rawId === 'number') {
+      numericId = rawId;
+    } else if (typeof rawId === 'string') {
+      const clean = rawId.replace(/\D/g, '');
+      if (clean) numericId = parseInt(clean, 10);
+    }
+
+    const payload = {
+      updated_at: new Date().toISOString(),
+    };
+    if (data.name) {
+      const parts = data.name.trim().split(' ');
+      payload.first_name = parts[0] || '';
+      payload.last_name = parts.slice(1).join(' ') || '';
+    }
+    if (data.department) {
+      payload.department = data.department;
+    }
+    if (data.role) {
+      payload.role = data.role;
+    }
+    if (data.email && data.email !== currentEmail) {
+      payload.email = targetEmail;
+    }
+
+    let updateSuccess = false;
+    let updateErrorMsg = null;
+
+    // 1. Primary update in Supabase by email
+    const emailToQuery = currentEmail || targetEmail;
+    if (emailToQuery) {
+      try {
+        const { data: updatedRows, error: emailErr } = await supabase
+          .from('users')
+          .update(payload)
+          .eq('email', emailToQuery)
+          .select();
+
+        if (!emailErr && updatedRows && updatedRows.length > 0) {
+          updateSuccess = true;
+        } else if (emailErr) {
+          updateErrorMsg = emailErr.message;
+          console.warn('Supabase update by email error:', emailErr);
+        }
+      } catch (e) {
+        console.warn('Supabase email update exception:', e);
+      }
+    }
+
+    // 2. Fallback update by numeric ID if email didn't match
+    if (!updateSuccess && numericId) {
+      try {
+        const { data: updatedRows, error: idErr } = await supabase
+          .from('users')
+          .update(payload)
+          .eq('id', numericId)
+          .select();
+
+        if (!idErr && updatedRows && updatedRows.length > 0) {
+          updateSuccess = true;
+        } else if (idErr) {
+          updateErrorMsg = idErr.message;
+          console.warn('Supabase update by ID error:', idErr);
+        }
+      } catch (e) {
+        console.warn('Supabase ID update exception:', e);
+      }
+    }
+
+    // 3. Also update backend API if reachable
     try {
-      const emailToUpdate = (data.email || user?.email || '').toLowerCase().trim();
-      const idToUpdate = data.id || user?.id;
+      if (numericId) {
+        await userService.updateUser(numericId, {
+          name: data.name,
+          department: data.department,
+          role: data.role,
+        });
+      }
+    } catch (backendErr) {
+      console.warn('Backend update notice:', backendErr);
+    }
 
-      const payload = {
-        updated_at: new Date().toISOString(),
-      };
-      if (data.name) {
-        const parts = data.name.trim().split(' ');
-        payload.first_name = parts[0] || '';
-        payload.last_name = parts.slice(1).join(' ') || '';
-      }
-      if (data.department) {
-        payload.department = data.department;
-      }
-      if (data.role) {
-        payload.role = data.role;
-      }
-
-      if (idToUpdate) {
-        await supabase.from('users').update(payload).eq('id', idToUpdate);
-      } else if (emailToUpdate) {
-        await supabase.from('users').update(payload).eq('email', emailToUpdate);
-      }
-    } catch (err) {
-      console.warn('Failed to persist profile update to Supabase:', err);
+    if (!updateSuccess && updateErrorMsg) {
+      throw updateErrorMsg;
     }
   };
 

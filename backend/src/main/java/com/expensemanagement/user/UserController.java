@@ -76,6 +76,57 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(userRepository.save(user));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return userRepository.findById(id).map(user -> {
+            if (body.containsKey("name") && body.get("name") != null) {
+                String name = (String) body.get("name");
+                String[] parts = name.trim().split(" ", 2);
+                user.setFirstName(parts[0]);
+                user.setLastName(parts.length > 1 ? parts[1] : "");
+            }
+            if (body.containsKey("firstName") && body.get("firstName") != null) {
+                user.setFirstName((String) body.get("firstName"));
+            }
+            if (body.containsKey("lastName") && body.get("lastName") != null) {
+                user.setLastName((String) body.get("lastName"));
+            }
+            if (body.containsKey("department") && body.get("department") != null) {
+                user.setDepartment((String) body.get("department"));
+            }
+            if (body.containsKey("role") && body.get("role") != null) {
+                user.setRole((String) body.get("role"));
+            }
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<User> updateProfile(@RequestBody Map<String, Object> body, Principal principal) {
+        String email = principal != null && principal.getName() != null ? principal.getName() : (String) body.get("email");
+        if (email == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        return userRepository.findByEmail(email.toLowerCase().trim()).map(user -> {
+            if (body.containsKey("name") && body.get("name") != null) {
+                String name = (String) body.get("name");
+                String[] parts = name.trim().split(" ", 2);
+                user.setFirstName(parts[0]);
+                user.setLastName(parts.length > 1 ? parts[1] : "");
+            }
+            if (body.containsKey("firstName") && body.get("firstName") != null) {
+                user.setFirstName((String) body.get("firstName"));
+            }
+            if (body.containsKey("lastName") && body.get("lastName") != null) {
+                user.setLastName((String) body.get("lastName"));
+            }
+            if (body.containsKey("department") && body.get("department") != null) {
+                user.setDepartment((String) body.get("department"));
+            }
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('Admin')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {

@@ -42,7 +42,7 @@ function useSidebar() {
 }
 
 function SidebarProvider({
-  defaultOpen = true,
+  defaultOpen,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -53,29 +53,29 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  // On mobile & tablet view (< 1024px), default to collapsed (icon rail); on desktop, default to expanded
+  const isInitialMobileOrTablet = typeof window !== "undefined" && window.innerWidth < 1024
+  const initialOpen = defaultOpen !== undefined ? defaultOpen : !isInitialMobileOrTablet
+
+  const [_open, _setOpen] = React.useState(initialOpen)
   const setOpen = React.useCallback(
     (value) => {
-      const openState = typeof value === "function" ? value(open) : value
-      if (setOpenProp) {
-        setOpenProp(openState)
-      } else {
-        _setOpen(openState)
-      }
-
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      _setOpen((prev) => {
+        const next = typeof value === "function" ? value(prev) : value
+        if (setOpenProp) {
+          setOpenProp(next)
+        }
+        document.cookie = `${SIDEBAR_COOKIE_NAME}=${next}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        return next
+      })
     },
-    [setOpenProp, open]
+    [setOpenProp]
   )
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    return setOpen((o) => !o)
+  }, [setOpen])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -95,6 +95,7 @@ function SidebarProvider({
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
+  const open = openProp ?? _open
   const state = open ? "expanded" : "collapsed"
 
   const contextValue = React.useMemo(() => ({
@@ -139,7 +140,7 @@ function Sidebar({
   dir,
   ...props
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar()
 
   if (collapsible === "none") {
     return (
@@ -156,75 +157,57 @@ function Sidebar({
     )
   }
 
-  if (isMobile) {
-    return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-        <SheetContent
-          dir={dir}
-          data-sidebar="sidebar"
-          data-slot="sidebar"
-          data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE
-            }
-          }
-          side={side}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
   return (
-    <div
-      className="group peer hidden text-sidebar-foreground lg:block"
-      data-state={state}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
-      data-variant={variant}
-      data-side={side}
-      data-slot="sidebar"
-    >
-      {/* This is what handles the sidebar gap on desktop */}
-      <div
-        data-slot="sidebar-gap"
-        className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] will-change-[width]",
-          "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
-        )}
-      />
-      <div
-        data-slot="sidebar-container"
-        data-side={side}
-        className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] will-change-[width] overflow-x-hidden data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] lg:flex",
-          // Adjust the padding for floating and inset variants.
-          variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          className
-        )}
-        {...props}
-      >
+    <>
+      {/* Subtle backdrop on small screens (mobile and tablet) when sidebar is expanded */}
+      {state === "expanded" && (
         <div
-          data-sidebar="sidebar"
-          data-slot="sidebar-inner"
-          className="flex size-full flex-col bg-sidebar overflow-x-hidden group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-2xs lg:hidden"
+        />
+      )}
+      <div
+        className="group peer text-sidebar-foreground block"
+        data-state={state}
+        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-variant={variant}
+        data-side={side}
+        data-slot="sidebar"
+      >
+        {/* This is what handles the sidebar gap on mobile, tablet, and desktop */}
+        <div
+          data-slot="sidebar-gap"
+          className={cn(
+            "relative bg-transparent transition-[width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] will-change-[width]",
+            "group-data-[collapsible=offcanvas]:w-0",
+            "group-data-[side=right]:rotate-180",
+            variant === "floating" || variant === "inset"
+              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
+              : "w-(--sidebar-width-icon) lg:w-(--sidebar-width) group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
+          )}
+        />
+        <div
+          data-slot="sidebar-container"
+          data-side={side}
+          className={cn(
+            "fixed inset-y-0 z-40 flex h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] will-change-[width] overflow-x-hidden data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            variant === "floating" || variant === "inset"
+              ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+              : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            className
+          )}
+          {...props}
         >
-          {children}
+          <div
+            data-sidebar="sidebar"
+            data-slot="sidebar-inner"
+            className="flex size-full flex-col bg-sidebar overflow-x-hidden group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          >
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
