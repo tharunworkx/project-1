@@ -10,7 +10,7 @@ export const ROLES = {
 
 export function useFinanceRole() {
   const { user, updateUser } = useAuth();
-  const currentRole = user?.role || ROLES.ADMIN;
+  const currentRole = user?.role || ROLES.EMPLOYEE;
   const roleLower = currentRole.toLowerCase();
 
   const isAdmin = roleLower === 'admin';

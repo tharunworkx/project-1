@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
 import { supabase } from '../../services/supabaseStorage';
+import expenseStore from '../../services/expenseStore';
 import {
   Plus,
   Search,
@@ -192,8 +193,9 @@ export const Expenses = () => {
           }
         }
 
+        let mapped = [];
         if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
-          const mapped = dbExpenses.map((e) => {
+          mapped = dbExpenses.map((e) => {
             const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
             const initials = claimantName.slice(0, 2).toUpperCase();
             const formattedAmount = e.amount ? `₹${Number(e.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹0.00';
@@ -215,8 +217,40 @@ export const Expenses = () => {
               proofImage: e.receiptUrl,
             };
           });
-          setExpenseList([...mapped, ...mockExpenses]);
         }
+
+        const storeExpenses = expenseStore.getExpenses().map((e) => {
+          const claimantName = e.claimant || (e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee'));
+          const initials = claimantName.slice(0, 2).toUpperCase();
+          const rawAmount = e.numericAmount || (typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount).replace(/[^0-9.]/g, '')) || 0);
+          const formattedAmount = e.amount && String(e.amount).includes('₹') ? e.amount : `₹${rawAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          return {
+            id: e.id,
+            merchant: e.merchant || e.title || 'Corporate Vendor',
+            title: e.title || e.description || 'Expense Claim',
+            category: e.category || 'General',
+            claimant: claimantName,
+            email: e.email || e.submittedBy || 'employee@company.com',
+            avatarFallback: initials,
+            department: e.department || 'General',
+            paymentMode: e.paymentMode || 'Direct Reimbursement',
+            amount: formattedAmount,
+            date: e.date || 'Today',
+            status: e.status ? (e.status.charAt(0).toUpperCase() + e.status.slice(1).toLowerCase()) : 'Pending',
+            receiptUrl: e.receiptUrl || e.proofImage,
+            proofImage: e.proofImage || e.receiptUrl,
+          };
+        });
+
+        // Merge DB, local store, and mock expenses without duplicates by ID
+        const combined = [...mapped, ...storeExpenses, ...mockExpenses];
+        const uniqueMap = new Map();
+        combined.forEach((item) => {
+          if (!uniqueMap.has(item.id)) {
+            uniqueMap.set(item.id, item);
+          }
+        });
+        setExpenseList(Array.from(uniqueMap.values()));
       } catch (err) {
         console.warn('Could not fetch expenses from API/Supabase:', err);
       }
@@ -264,8 +298,8 @@ export const Expenses = () => {
         </div>
       </div>
 
-      {/* Main Datatable Card matching Image 2 */}
-      <Card className="shadow-xs">
+      {/* Main Datatable Card */}
+      <Card className="shadow-xs overflow-hidden">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
           <div>
             <CardTitle className="text-lg font-semibold text-foreground">
@@ -302,69 +336,113 @@ export const Expenses = () => {
         </CardHeader>
 
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-6">EMPLOYEE</TableHead>
-                <TableHead>CATEGORY</TableHead>
-                <TableHead>DATE</TableHead>
-                <TableHead>PAYMENT MODE</TableHead>
-                <TableHead>STATUS</TableHead>
-                <TableHead className="pr-6">AMOUNT</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    <p className="font-semibold text-foreground">No matching expenses found</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Try clearing filters or search term</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    onClick={() => navigate(`/expenses/${row.id}`)}
-                    className="cursor-pointer hover:bg-muted/60 transition-colors group"
-                    title="Click row to view expense details"
-                  >
-                    <TableCell className="pl-6">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar className="size-8.5 rounded-full border border-border/60">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                            {row.avatarFallback}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col text-left leading-tight">
-                          <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{row.claimant}</span>
-                          <span className="text-[11px] text-muted-foreground">{row.email}</span>
-                        </div>
+          {/* Mobile Card Layout (Touch-friendly & responsive, no horizontal scroll) */}
+          <div className="md:hidden divide-y divide-border">
+            {filtered.length === 0 ? (
+              <div className="text-center py-10 px-4 text-muted-foreground">
+                <p className="font-semibold text-foreground">No matching expenses found</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Try clearing filters or search term</p>
+              </div>
+            ) : (
+              filtered.map((row) => (
+                <div
+                  key={row.id}
+                  onClick={() => navigate(`/expenses/${row.id}`)}
+                  className="p-4 flex flex-col gap-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Avatar className="size-8.5 rounded-full border border-border/60 shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {row.avatarFallback}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col text-left leading-tight min-w-0">
+                        <span className="text-xs font-semibold text-foreground truncate">{row.claimant}</span>
+                        <span className="text-[11px] text-muted-foreground truncate">{row.merchant}</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-medium text-foreground">
-                      <div>
-                        <div>{row.category}</div>
-                        <span className="text-[10px] text-muted-foreground">{row.merchant}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {row.date}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {row.paymentMode}
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-bold text-foreground font-mono">{row.amount}</div>
                       <StatusBadge status={row.status} />
-                    </TableCell>
-                    <TableCell className="pr-6 text-xs font-bold text-foreground font-mono">
-                      {row.amount}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
+                    <span className="truncate">{row.category}</span>
+                    <span className="shrink-0">{row.date}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table Layout */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-6">EMPLOYEE</TableHead>
+                  <TableHead>CATEGORY</TableHead>
+                  <TableHead>DATE</TableHead>
+                  <TableHead>PAYMENT MODE</TableHead>
+                  <TableHead>STATUS</TableHead>
+                  <TableHead className="pr-6">AMOUNT</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <p className="font-semibold text-foreground">No matching expenses found</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Try clearing filters or search term</p>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filtered.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      onClick={() => navigate(`/expenses/${row.id}`)}
+                      className="cursor-pointer hover:bg-muted/60 transition-colors group"
+                      title="Click row to view expense details"
+                    >
+                      <TableCell className="pl-6">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="size-8.5 rounded-full border border-border/60">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                              {row.avatarFallback}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col text-left leading-tight">
+                            <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{row.claimant}</span>
+                            <span className="text-[11px] text-muted-foreground">{row.email}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-foreground">
+                        <div>
+                          <div>{row.category}</div>
+                          <span className="text-[10px] text-muted-foreground">{row.merchant}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {row.date}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {row.paymentMode}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={row.status} />
+                      </TableCell>
+                      <TableCell className="pr-6 text-xs font-bold text-foreground font-mono">
+                        {row.amount}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination Footer */}
           <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">

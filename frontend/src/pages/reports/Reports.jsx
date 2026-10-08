@@ -144,7 +144,7 @@ export const Reports = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Financial Reports & Reconciliation
+            Financial Report and Analytics
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Audit-grade reporting engine for statutory filings, departmental spend allocations, and treasury exports.

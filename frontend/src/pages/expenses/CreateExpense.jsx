@@ -47,6 +47,7 @@ export const CreateExpense = () => {
   const [proofData, setProofData] = useState(null);
   const [imagePreviewModalOpen, setImagePreviewModalOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const [receiptError, setReceiptError] = useState('');
 
   const [formData, setFormData] = useState({
     merchant: '',
@@ -102,6 +103,7 @@ export const CreateExpense = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setReceiptFile(file);
+      setReceiptError('');
       try {
         const processed = await processReceiptImage(file);
         setProofData(processed);
@@ -176,6 +178,15 @@ export const CreateExpense = () => {
   // Submit Claim
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Mandatory receipt validation
+    if (!receiptFile && !proofData?.dataUrl && !proofData?.previewUrl) {
+      setReceiptError('Receipt and proof document is mandatory. Please attach an invoice or receipt image before submitting your claim.');
+      const el = document.getElementById('receiptCard');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
     setSubmitting(true);
     try {
       let finalReceiptUrl = proofData?.dataUrl || null;
@@ -250,19 +261,28 @@ export const CreateExpense = () => {
 
       // 3. Keep local store synchronized
       try {
-        expenseStore.addExpense({
-          ...formData,
-          id: createdDbId ? `EXP-${createdDbId}` : (existingDraftId || `EXP-${Date.now()}`),
-          dbId: createdDbId,
-          title: expenseTitle,
-          submittedBy: claimantEmail,
-          status: 'Pending',
-          amount: numAmount,
-          receiptAttached: !!proofData,
-          receiptUrl: finalReceiptUrl,
-          proofImage: finalReceiptUrl,
-          createdAt: new Date().toISOString(),
-        });
+        expenseStore.addExpense(
+          {
+            ...formData,
+            id: createdDbId ? `EXP-${createdDbId}` : (existingDraftId || `EXP-${Date.now()}`),
+            dbId: createdDbId,
+            title: expenseTitle,
+            claimant: user?.name || user?.email?.split('@')[0] || 'Employee',
+            email: claimantEmail,
+            submittedBy: claimantEmail,
+            department: user?.department || formData.department || 'Engineering',
+            status: 'Pending',
+            numericAmount: numAmount,
+            amount: `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+            receiptAttached: !!proofData || !!finalReceiptUrl,
+            receiptUrl: finalReceiptUrl,
+            proofImage: finalReceiptUrl,
+            receiptName: proofData?.name || (finalReceiptUrl ? 'receipt_proof.jpg' : null),
+            receiptSize: proofData?.size || 0,
+            createdAt: new Date().toISOString(),
+          },
+          user
+        );
       } catch (storeErr) {
         console.warn('expenseStore error:', storeErr);
       }
@@ -508,12 +528,18 @@ export const CreateExpense = () => {
         )}
 
         {/* Receipt Proof Upload Dropzone Card */}
-        <Card className="shadow-xs border-border">
-          <CardHeader className="p-5 pb-3 border-b border-border flex flex-row items-center justify-between">
+        <Card id="receiptCard" className={`shadow-xs border-border transition-all ${receiptError ? 'ring-2 ring-destructive/80' : ''}`}>
+          <CardHeader className="p-5 pb-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base font-semibold">Receipt & Proof Document</CardTitle>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <span>Receipt & Proof Document</span>
+                <span className="text-destructive font-bold text-sm">*</span>
+                <Badge variant="outline" className="text-[10px] font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400">
+                  Mandatory
+                </Badge>
+              </CardTitle>
               <CardDescription className="text-xs">
-                Upload invoice or receipt photo to show as proof to the manager during audit review
+                Upload invoice or receipt photo as mandatory proof for manager audit and sign-off
               </CardDescription>
             </div>
             {proofData && (
@@ -525,6 +551,13 @@ export const CreateExpense = () => {
           </CardHeader>
 
           <CardContent className="p-5">
+            {receiptError && (
+              <div className="mb-4 p-3 rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2 font-medium animate-in fade-in">
+                <AlertTriangle className="size-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{receiptError}</span>
+              </div>
+            )}
+
             <div className="relative">
               <input
                 id="receiptUpload"
@@ -546,7 +579,7 @@ export const CreateExpense = () => {
                     Click to upload receipt photo or PDF, or drag and drop
                   </span>
                   <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, JPEG, WEBP or PDF up to 10MB
+                    PNG, JPG, JPEG, WEBP or PDF up to 10MB <strong className="text-destructive font-semibold">(Mandatory)</strong>
                   </p>
                 </label>
               ) : (
@@ -615,18 +648,18 @@ export const CreateExpense = () => {
           </CardContent>
         </Card>
 
-        {/* Action Buttons: Cancel, Save as Draft, Submit Claim */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        {/* Action Buttons: Responsive & Mobile Friendly Sticky Bar */}
+        <div className="sticky bottom-0 sm:static bg-background/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none p-3.5 sm:p-0 -mx-4 sm:mx-0 border-t border-border sm:border-0 z-30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 shadow-lg sm:shadow-none">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate('/expenses')}
-            className="text-xs h-10 px-4 cursor-pointer w-full sm:w-auto"
+            className="text-xs h-10 px-4 cursor-pointer w-full sm:w-auto order-3 sm:order-none"
           >
             Cancel
           </Button>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             <Button
               type="button"
               variant="outline"
@@ -641,13 +674,13 @@ export const CreateExpense = () => {
             <Button
               type="submit"
               disabled={submitting}
-              className="text-xs h-10 px-5 gap-2 cursor-pointer bg-foreground text-background hover:bg-foreground/90 font-medium w-full sm:w-auto"
+              className="text-xs sm:text-sm h-11 sm:h-10 px-6 gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-semibold w-full sm:w-auto shadow-md"
             >
               {submitting ? (
                 <span>Submitting Claim...</span>
               ) : (
                 <>
-                  <Send className="size-3.5" />
+                  <Send className="size-4" />
                   <span>{existingDraftId ? 'Submit Draft for Approval' : 'Submit Claim for Approval'}</span>
                 </>
               )}

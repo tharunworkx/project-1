@@ -331,6 +331,14 @@ export const expenseStore = {
     return filtered;
   },
 
+  addExpense: (data, user) => {
+    return expenseStore.saveExpense(data, user);
+  },
+
+  updateExpenseStatus: (id, newStatus, reason = '') => {
+    return expenseStore.updateStatus(id, newStatus, reason);
+  },
+
   getPendingApprovals: () => {
     const list = expenseStore.getExpenses();
     return list.filter((item) => item.status && item.status.toLowerCase() === 'pending');

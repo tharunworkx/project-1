@@ -193,8 +193,9 @@ export const ApprovalQueue = () => {
           }
         }
 
+        let pendingFromDb = [];
         if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
-          const pendingFromDb = dbExpenses
+          pendingFromDb = dbExpenses
             .filter((e) => (e.status || '').toUpperCase() === 'PENDING')
             .map((e) => {
               const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
@@ -220,8 +221,41 @@ export const ApprovalQueue = () => {
                 policyFlag: numAmount > 25000 ? 'Requires VP Sign-off' : (e.category?.includes('Food') && numAmount > 5000 ? 'Meal limit exceeded' : null),
               };
             });
-          setItems([...pendingFromDb, ...pendingApprovalsData]);
         }
+
+        const storePending = expenseStore.getPendingApprovals().map((e) => {
+          const claimantName = e.claimant || (e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee'));
+          const initials = claimantName.slice(0, 2).toUpperCase();
+          const rawAmount = e.numericAmount || (typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount).replace(/[^0-9.]/g, '')) || 0);
+          const formattedAmount = e.amount && String(e.amount).includes('₹') ? e.amount : `₹${rawAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          return {
+            id: e.id,
+            dbId: e.dbId,
+            claimant: claimantName,
+            email: e.email || e.submittedBy || 'employee@company.com',
+            avatarFallback: initials,
+            department: e.department || 'Engineering',
+            merchant: e.merchant || e.title || 'Corporate Vendor',
+            title: e.title || e.description || 'Expense Claim',
+            category: e.category || 'General',
+            paymentMode: e.paymentMode || 'Direct Reimbursement',
+            amount: formattedAmount,
+            numericAmount: rawAmount,
+            date: e.date || 'Today',
+            status: 'pending',
+            policyFlag: e.policyFlag || (rawAmount > 25000 ? 'Requires VP Sign-off' : null),
+          };
+        });
+
+        // Combine DB, local store, and mock approvals with deduplication
+        const allPending = [...pendingFromDb, ...storePending, ...pendingApprovalsData];
+        const uniquePending = new Map();
+        allPending.forEach((item) => {
+          if (!uniquePending.has(item.id)) {
+            uniquePending.set(item.id, item);
+          }
+        });
+        setItems(Array.from(uniquePending.values()));
       } catch (err) {
         console.warn('Could not load pending expenses from backend/Supabase:', err);
       }
@@ -247,9 +281,11 @@ export const ApprovalQueue = () => {
   const handleApprove = async (id) => {
     const item = items.find((i) => i.id === id);
     const approverName = user?.name || user?.email || 'Approver';
-    if (item?.dbId) {
+    const dbTargetId = item?.dbId || (typeof id === 'string' && id.startsWith('EXP-') ? id.replace('EXP-', '') : id);
+
+    if (dbTargetId) {
       try {
-        await expenseService.approveExpense(item.dbId, { approver: approverName });
+        await expenseService.approveExpense(dbTargetId, { approver: approverName });
       } catch (err) {
         console.warn('Backend approval skipped/offline:', err);
       }
@@ -261,13 +297,16 @@ export const ApprovalQueue = () => {
             approved_by: approverName,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', item.dbId);
+          .eq('id', dbTargetId);
       } catch (dbErr) {
         console.error('Supabase approval update error:', dbErr);
       }
     }
     try {
       expenseStore.updateExpenseStatus(id, 'Approved');
+      if (dbTargetId && dbTargetId !== id) {
+        expenseStore.updateExpenseStatus(dbTargetId, 'Approved');
+      }
     } catch (e) {
       // ignore
     }
@@ -279,9 +318,11 @@ export const ApprovalQueue = () => {
 
   const handleReject = async (id) => {
     const item = items.find((i) => i.id === id);
-    if (item?.dbId) {
+    const dbTargetId = item?.dbId || (typeof id === 'string' && id.startsWith('EXP-') ? id.replace('EXP-', '') : id);
+
+    if (dbTargetId) {
       try {
-        await expenseService.rejectExpense(item.dbId);
+        await expenseService.rejectExpense(dbTargetId);
       } catch (err) {
         console.warn('Backend reject skipped/offline:', err);
       }
@@ -292,13 +333,16 @@ export const ApprovalQueue = () => {
             status: 'REJECTED',
             updated_at: new Date().toISOString(),
           })
-          .eq('id', item.dbId);
+          .eq('id', dbTargetId);
       } catch (dbErr) {
         console.error('Supabase reject update error:', dbErr);
       }
     }
     try {
       expenseStore.updateExpenseStatus(id, 'Rejected');
+      if (dbTargetId && dbTargetId !== id) {
+        expenseStore.updateExpenseStatus(dbTargetId, 'Rejected');
+      }
     } catch (e) {
       // ignore
     }
@@ -312,9 +356,11 @@ export const ApprovalQueue = () => {
     const approverName = user?.name || user?.email || 'Approver';
     for (const id of selectedIds) {
       const item = items.find((i) => i.id === id);
-      if (item?.dbId) {
+      const dbTargetId = item?.dbId || (typeof id === 'string' && id.startsWith('EXP-') ? id.replace('EXP-', '') : id);
+
+      if (dbTargetId) {
         try {
-          await expenseService.approveExpense(item.dbId, { approver: approverName });
+          await expenseService.approveExpense(dbTargetId, { approver: approverName });
         } catch (err) {
           console.warn('Backend batch approve skipped/offline:', err);
         }
@@ -326,13 +372,16 @@ export const ApprovalQueue = () => {
               approved_by: approverName,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', item.dbId);
+            .eq('id', dbTargetId);
         } catch (dbErr) {
           console.error('Supabase batch approval error:', dbErr);
         }
       }
       try {
         expenseStore.updateExpenseStatus(id, 'Approved');
+        if (dbTargetId && dbTargetId !== id) {
+          expenseStore.updateExpenseStatus(dbTargetId, 'Approved');
+        }
       } catch (e) {
         // ignore
       }
@@ -413,125 +462,202 @@ export const ApprovalQueue = () => {
         </CardHeader>
 
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10 pl-6">
-                  <Checkbox
-                    checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>EMPLOYEE</TableHead>
-                <TableHead>CATEGORY</TableHead>
-                <TableHead>DATE</TableHead>
-                <TableHead>PAYMENT MODE</TableHead>
-                <TableHead>STATUS</TableHead>
-                <TableHead>AMOUNT</TableHead>
-                <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2" />
-                    <p className="font-semibold text-foreground">Queue is completely cleared!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">No pending claims requiring review</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((row) => {
-                  const isChecked = selectedIds.includes(row.id);
-                  return (
-                    <TableRow
-                      key={row.id}
-                      onClick={() => navigate(`/expenses/${row.id}`)}
-                      className={`cursor-pointer hover:bg-muted/60 transition-colors ${isChecked ? "bg-muted/40" : ""}`}
-                      title="Click row to view full claim details"
-                    >
-                      <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => toggleSelect(row.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="size-8.5 rounded-full border border-border/60">
-                            <AvatarImage src={row.avatar} alt={row.claimant} />
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                              {row.avatarFallback}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col text-left leading-tight">
-                            <span className="text-xs font-semibold text-foreground">{row.claimant}</span>
-                            <span className="text-[11px] text-muted-foreground">{row.email}</span>
-                          </div>
+          {/* Mobile Card List: Responsive & Touch-friendly without horizontal scroll */}
+          <div className="md:hidden divide-y divide-border">
+            {filtered.length === 0 ? (
+              <div className="text-center py-12 px-4 text-muted-foreground">
+                <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2" />
+                <p className="font-semibold text-foreground">Queue is completely cleared!</p>
+                <p className="text-xs text-muted-foreground mt-0.5">No pending claims requiring review</p>
+              </div>
+            ) : (
+              filtered.map((row) => {
+                const isChecked = selectedIds.includes(row.id);
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => navigate(`/expenses/${row.id}`)}
+                    className={`p-4 flex flex-col gap-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors ${isChecked ? 'bg-muted/30' : ''}`}
+                    title="Tap to view full claim details"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => toggleSelect(row.id)}
+                          />
                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-foreground">
-                        <div>
-                          <div>{row.category}</div>
-                          {row.policyFlag && (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-normal">
-                              <AlertTriangle className="size-2.5" />
-                              {row.policyFlag}
-                            </span>
-                          )}
+                        <Avatar className="size-8.5 rounded-full border border-border/60 shrink-0">
+                          <AvatarImage src={row.avatar} alt={row.claimant} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                            {row.avatarFallback}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col text-left leading-tight min-w-0">
+                          <span className="text-xs font-semibold text-foreground truncate">{row.claimant}</span>
+                          <span className="text-[11px] text-muted-foreground truncate">{row.email}</span>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {row.date}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {row.paymentMode}
-                      </TableCell>
-                      <TableCell>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-bold text-foreground font-mono">{row.amount}</div>
                         <StatusBadge status={row.status} />
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-foreground">
-                        {row.amount}
-                      </TableCell>
-                      <TableCell className="pr-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-foreground">
-                              <EllipsisVertical className="size-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/expenses/${row.id}`)}
-                              className="cursor-pointer flex items-center gap-2"
-                            >
-                              <Eye className="size-4" />
-                              <span>View Details</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleApprove(row.id)}
-                              className="cursor-pointer text-emerald-600 focus:text-emerald-600 flex items-center gap-2"
-                            >
-                              <Check className="size-4" />
-                              <span>Approve Claim</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleReject(row.id)}
-                              className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2"
-                            >
-                              <X className="size-4" />
-                              <span>Reject Claim</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
+                      <span className="truncate">{row.category} • {row.department}</span>
+                      <span className="shrink-0">{row.date}</span>
+                    </div>
+
+                    {row.policyFlag && (
+                      <div className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <AlertTriangle className="size-3 shrink-0" />
+                        <span className="truncate">{row.policyFlag}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                        onClick={() => handleReject(row.id)}
+                      >
+                        <X className="size-3 mr-1" />
+                        <span>Reject</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => handleApprove(row.id)}
+                      >
+                        <Check className="size-3 mr-1" />
+                        <span>Approve</span>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table className="w-full min-w-[750px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10 pl-6">
+                    <Checkbox
+                      checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>EMPLOYEE</TableHead>
+                  <TableHead>CATEGORY</TableHead>
+                  <TableHead>DATE</TableHead>
+                  <TableHead>PAYMENT MODE</TableHead>
+                  <TableHead>STATUS</TableHead>
+                  <TableHead>AMOUNT</TableHead>
+                  <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                      <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2" />
+                      <p className="font-semibold text-foreground">Queue is completely cleared!</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">No pending claims requiring review</p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((row) => {
+                    const isChecked = selectedIds.includes(row.id);
+                    return (
+                      <TableRow
+                        key={row.id}
+                        onClick={() => navigate(`/expenses/${row.id}`)}
+                        className={`cursor-pointer hover:bg-muted/60 transition-colors ${isChecked ? "bg-muted/40" : ""}`}
+                        title="Click row to view full claim details"
+                      >
+                        <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => toggleSelect(row.id)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="size-8.5 rounded-full border border-border/60">
+                              <AvatarImage src={row.avatar} alt={row.claimant} />
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                {row.avatarFallback}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col text-left leading-tight">
+                              <span className="text-xs font-semibold text-foreground">{row.claimant}</span>
+                              <span className="text-[11px] text-muted-foreground">{row.email}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-foreground">
+                          <div>
+                            <div>{row.category}</div>
+                            {row.policyFlag && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-normal">
+                                <AlertTriangle className="size-2.5" />
+                                {row.policyFlag}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {row.date}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {row.paymentMode}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={row.status} />
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-foreground">
+                          {row.amount}
+                        </TableCell>
+                        <TableCell className="pr-6 text-right" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-foreground cursor-pointer">
+                                <EllipsisVertical className="size-4" />
+                                <span className="sr-only">Actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(row.id)}
+                                className="cursor-pointer text-emerald-600 focus:text-emerald-600 flex items-center gap-2"
+                              >
+                                <Check className="size-4" />
+                                <span>Approve Claim</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleReject(row.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2"
+                              >
+                                <X className="size-4" />
+                                <span>Reject Claim</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination Footer */}
           <div className="flex items-center justify-between px-6 py-3.5 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">

@@ -46,7 +46,7 @@ import { cn } from "cn";
 import { useAuth } from "../../context/AuthContext";
 
 function CollapsibleNavItem({ item, location }) {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isAnyChildActive = item.childItems?.some(
     (sub) => location.pathname === sub.href
@@ -93,6 +93,9 @@ function CollapsibleNavItem({ item, location }) {
                   <DropdownMenuItem key={subItem.label} asChild className="cursor-pointer rounded-lg p-0">
                     <NavLink
                       to={subItem.href}
+                      onClick={() => {
+                        if (isMobile) setOpenMobile(false);
+                      }}
                       className={cn(
                         "flex items-center w-full px-2.5 py-1.5 text-xs rounded-lg transition-colors font-medium",
                         isSubActive
@@ -135,6 +138,9 @@ function CollapsibleNavItem({ item, location }) {
                 <NavLink
                   key={subItem.label}
                   to={subItem.href}
+                  onClick={() => {
+                    if (isMobile) setOpenMobile(false);
+                  }}
                   className={cn(
                     "block py-1 text-xs transition-colors truncate",
                     isSubActive
@@ -169,7 +175,7 @@ function CollapsibleNavItem({ item, location }) {
 
 export function AppSidebar({ ...props }) {
   const location = useLocation();
-  const { open, toggleSidebar } = useSidebar();
+  const { open, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   const { user } = useAuth();
 
   const roleName = user?.role || "Employee";
@@ -198,9 +204,9 @@ export function AppSidebar({ ...props }) {
           icon: LayoutDashboard,
         },
         {
-          label: "Finance Analytics",
-          href: "/finance",
-          icon: Landmark,
+          label: "Financial Report and Analytics",
+          href: "/reports",
+          icon: BarChart3,
         },
       ],
     },
@@ -238,11 +244,6 @@ export function AppSidebar({ ...props }) {
           label: "Budgets",
           href: "/budgets",
           icon: PieChart,
-        },
-        {
-          label: "Financial Reports",
-          href: "/reports",
-          icon: BarChart3,
         },
       ],
     },
@@ -317,11 +318,9 @@ export function AppSidebar({ ...props }) {
               return { ...item, childItems: filteredChildren };
             }
 
-            if (item.href === "/finance") return isFinanceTeam ? item : null;
             if (item.href === "/approvals") return (isManager || isFinanceTeam) ? item : null;
             if (item.href === "/fraud-detection") return (isCFO || isAdmin) ? item : null;
             if (item.href === "/budgets") return (isManager || isFinanceTeam) ? item : null;
-            if (item.href === "/reports") return (isManager || isFinanceTeam) ? item : null;
             if (item.href === "/audit") return isFinanceTeam ? item : null;
             if (item.href === "/integrations") return isAdmin ? item : null;
             if (item.href === "/monitoring") return (isCFO || isAdmin) ? item : null;
@@ -399,7 +398,13 @@ export function AppSidebar({ ...props }) {
                           "h-10 rounded-xl px-3 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto!"
                         )}
                       >
-                        <NavLink to={item.href} className="flex items-center justify-start group-data-[collapsible=icon]:justify-center size-full">
+                        <NavLink
+                          to={item.href}
+                          onClick={() => {
+                            if (isMobile) setOpenMobile(false);
+                          }}
+                          className="flex items-center justify-start group-data-[collapsible=icon]:justify-center size-full"
+                        >
                           <Icon className="size-4.5 shrink-0" />
                           <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
                           {item.badge && (

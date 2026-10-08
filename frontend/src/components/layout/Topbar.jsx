@@ -250,26 +250,12 @@ export default function Topbar() {
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-border/80 bg-card flex items-center shadow-xs">
       <div className="flex size-full items-center justify-between px-4 sm:px-6">
-        {/* Left side: Breadcrumb (and mobile trigger) */}
+        {/* Left side: Mobile trigger and Clean Section Title */}
         <div className="flex items-center gap-3">
           <SidebarTrigger className="md:hidden size-9 flex items-center justify-center rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs [&_svg]:size-4.5" />
-          <Breadcrumb className="flex items-center">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/dashboard" className="text-sm font-normal text-muted-foreground hover:text-foreground">
-                    Expense Management System
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-sm font-medium text-foreground">
-                  {currentTitle}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <h1 className="text-sm sm:text-base font-semibold text-foreground tracking-tight truncate">
+            {currentTitle}
+          </h1>
         </div>
 
         {/* Right side: Search, Theme Toggle, Notification, Profile Dropdown */}

@@ -524,11 +524,19 @@ export default function Receipts() {
                     const proofImg = row.proofImage || row.receiptUrl;
 
                     return (
-                      <TableRow key={row.id}>
+                      <TableRow
+                        key={row.id}
+                        onClick={() => navigate(`/expenses/${row.id}`)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        title="Click row to view full claim details"
+                      >
                         <TableCell className="pl-4">
                           <div
                             className="size-10 rounded-md overflow-hidden border border-border bg-muted cursor-pointer shrink-0 relative group"
-                            onClick={() => setSelectedReceipt(row)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedReceipt(row);
+                            }}
                             title="Click to zoom proof"
                           >
                             {proofImg ? (
@@ -579,7 +587,7 @@ export default function Receipts() {
                         <TableCell className="text-xs font-bold text-foreground">
                           {row.amount}
                         </TableCell>
-                        <TableCell className="pr-4 text-right">
+                        <TableCell className="pr-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
