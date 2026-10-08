@@ -159,11 +159,11 @@ function Sidebar({
 
   return (
     <>
-      {/* Subtle backdrop on small screens (mobile and tablet) when sidebar is expanded */}
+      {/* Backdrop on small screens (mobile and tablet) when sidebar is expanded - dims topbar and page */}
       {state === "expanded" && (
         <div
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-2xs lg:hidden"
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-2xs lg:hidden"
         />
       )}
       <div
@@ -190,7 +190,9 @@ function Sidebar({
           data-slot="sidebar-container"
           data-side={side}
           className={cn(
-            "fixed inset-y-0 z-40 flex h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] will-change-[width] overflow-x-hidden data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            "fixed inset-y-0 flex h-svh w-(--sidebar-width) transition-[left,right,width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] will-change-[width] overflow-x-hidden data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            // On mobile & tab view, expanded sidebar overlaps on top of topbar (z-[70]), on desktop sits normally (lg:z-40)
+            state === "expanded" ? "z-[70] lg:z-40 shadow-2xl" : "z-40",
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
               : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
