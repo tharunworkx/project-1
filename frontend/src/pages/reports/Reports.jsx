@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import FilterSelect from '@/components/common/FilterSelect';
 import { useAuth } from '@/context/AuthContext';
 import { useFinanceRole } from '@/hooks/useFinanceRole';
@@ -478,19 +479,21 @@ export const Reports = () => {
 
                 {/* Search within report preview */}
                 <div className="pt-1 flex items-center justify-between">
-                  <div className="relative w-64">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                    <Input
-                      type="text"
+                  <div className="w-64">
+                    <AnimatedSearchBar
                       placeholder="Filter records..."
                       value={previewSearch}
                       onChange={(e) => {
                         setPreviewSearch(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="h-8 pl-8 text-xs bg-muted/50 border-border/80"
+                      onClear={() => {
+                        setPreviewSearch('');
+                        setCurrentPage(1);
+                      }}
                     />
                   </div>
+
                   <span className="text-[11px] text-muted-foreground">
                     Showing {paginatedRecords.length} of {filteredRecords.length} records
                   </span>

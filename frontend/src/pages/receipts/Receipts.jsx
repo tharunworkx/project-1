@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
@@ -304,16 +305,15 @@ export default function Receipts() {
 
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* Search */}
-            <div className="relative w-44 sm:w-60">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                type="text"
+            <div className="w-44 sm:w-60">
+              <AnimatedSearchBar
                 placeholder="Search receipts..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
+                onClear={() => setSearch('')}
               />
             </div>
+
 
             {/* Status Filter */}
             <div className="w-36">

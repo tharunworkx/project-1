@@ -72,7 +72,7 @@ export const ToastProvider = ({ children }) => {
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto p-3.5 rounded-xl border shadow-lg flex items-start gap-3 transition-all duration-200 animate-in slide-in-from-top-3 fade-in ${bg}`}
+              className={`pointer-events-auto p-3.5 rounded-xl border shadow-lg flex items-start gap-3 transition-all duration-200 animate-jitter-toast-in ${bg}`}
             >
               {icon}
               <div className="flex-1 min-w-0">

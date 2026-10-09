@@ -21,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AnimatedSearchBar } from "../ui/AnimatedSearchBar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -219,35 +220,22 @@ export default function Topbar() {
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Quick Search Input with Live Results Popover */}
           <div ref={searchContainerRef} className="relative hidden md:block w-64 lg:w-80">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSearchFocused(true);
-                }}
-                onFocus={() => setSearchFocused(true)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search expenses, claims, users..."
-                className="h-9 pl-9 pr-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background focus-visible:border-foreground/30 shadow-xs transition-all font-medium"
-              />
-              {/* Clear button (with blue/accent X matching reference image) */}
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSearchFocused(false);
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4.5 flex items-center justify-center rounded-full text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
-                  title="Clear search"
-                >
-                  <X className="size-3.5 stroke-[2.5]" />
-                </button>
-              )}
-            </div>
+            <AnimatedSearchBar
+              size="md"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchFocused(true);
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onKeyDown={handleKeyDown}
+              onClear={() => {
+                setSearchQuery("");
+                setSearchFocused(false);
+              }}
+              placeholder="Search expenses, claims, users..."
+            />
+
 
             {/* Live Search Results Dropdown */}
             {searchFocused && searchQuery.trim().length > 0 && (

@@ -252,15 +252,18 @@ export const Notifications = () => {
                   </Button>
                 </div>
               ) : (
-                notifications.map((n) => (
+                notifications.map((n, index) => (
                   <div
-                    key={n.id}
-                    className={`p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3 hover:bg-muted/40 transition-colors ${
+                    key={`${filter}-${n.id}`}
+                    style={{
+                      animationDelay: `${index * 45}ms`,
+                    }}
+                    className={`animate-jitter-card-in p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3 hover:bg-muted/40 transition-all duration-200 group ${
                       !n.isRead ? 'bg-primary/5 dark:bg-primary/10 border-l-3 border-primary' : ''
                     }`}
                   >
                     <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-card border border-border/80 shrink-0 mt-0.5 shadow-2xs">
+                      <div className="p-2.5 rounded-xl bg-card border border-border/80 shrink-0 mt-0.5 shadow-2xs group-hover:scale-105 group-hover:border-primary/40 transition-all duration-200">
                         {getNotifIcon(n.type)}
                       </div>
 

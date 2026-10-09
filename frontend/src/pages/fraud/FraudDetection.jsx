@@ -35,6 +35,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 
 const mockFraudFlags = [
   {
@@ -371,15 +372,16 @@ export default function FraudDetection() {
           </Button>
         </div>
 
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
+        <div className="w-full md:w-72">
+          <AnimatedSearchBar
+            size="md"
             placeholder="Search claimant, merchant, or flag..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 rounded-xl text-xs"
+            onClear={() => setSearchTerm('')}
           />
         </div>
+
       </div>
 
       {/* Main Table of Flagged Items */}

@@ -28,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -175,16 +176,15 @@ export const Policies = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <div className="relative w-48 sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                type="text"
+            <div className="w-48 sm:w-64">
+              <AnimatedSearchBar
                 placeholder="Filter policies..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
+                onClear={() => setSearch('')}
               />
             </div>
+
             <Button
               size="sm"
               className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs"
