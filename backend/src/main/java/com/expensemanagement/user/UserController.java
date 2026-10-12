@@ -65,7 +65,9 @@ public class UserController {
         String department = body.get("department") != null ? (String) body.get("department") : "General";
         String role = body.get("role") != null ? (String) body.get("role") : "Employee";
 
+        String resolvedName = (name != null && !name.isBlank()) ? name.trim() : (firstName + " " + lastName).trim();
         User user = User.builder()
+                .name(resolvedName)
                 .firstName(firstName)
                 .lastName(lastName)
                 .email(email)

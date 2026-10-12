@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import FilterSelect from '@/components/common/FilterSelect';
 import { useAuth } from '@/context/AuthContext';
 import { useFinanceRole } from '@/hooks/useFinanceRole';
@@ -144,7 +145,7 @@ export const Reports = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Financial Report and Analytics
+            Financial Reports & Reconciliation
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Audit-grade reporting engine for statutory filings, departmental spend allocations, and treasury exports.
@@ -386,11 +387,11 @@ export const Reports = () => {
                   </div>
 
                   {/* Export Options: CSV, Excel, PDF */}
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer"
+                      className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
                       onClick={() => handleExport('csv')}
                     >
                       <Download className="size-3" />
@@ -400,7 +401,7 @@ export const Reports = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer"
+                      className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
                       onClick={() => handleExport('excel')}
                     >
                       <FileSpreadsheet className="size-3" />
@@ -409,7 +410,7 @@ export const Reports = () => {
 
                     <Button
                       size="sm"
-                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full shadow-2xs bg-primary text-primary-foreground cursor-pointer"
+                      className="h-8 gap-1.5 text-xs rounded-full shadow-2xs bg-primary text-primary-foreground"
                       onClick={() => handleExport('pdf')}
                     >
                       <Printer className="size-3" />
@@ -477,21 +478,23 @@ export const Reports = () => {
                 )}
 
                 {/* Search within report preview */}
-                <div className="pt-1 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between w-full">
-                  <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                    <Input
-                      type="text"
+                <div className="pt-1 flex items-center justify-between">
+                  <div className="w-64">
+                    <AnimatedSearchBar
                       placeholder="Filter records..."
                       value={previewSearch}
                       onChange={(e) => {
                         setPreviewSearch(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="h-8 pl-8 text-xs bg-muted/50 border-border/80 w-full"
+                      onClear={() => {
+                        setPreviewSearch('');
+                        setCurrentPage(1);
+                      }}
                     />
                   </div>
-                  <span className="text-[11px] text-muted-foreground self-start sm:self-auto shrink-0">
+
+                  <span className="text-[11px] text-muted-foreground">
                     Showing {paginatedRecords.length} of {filteredRecords.length} records
                   </span>
                 </div>

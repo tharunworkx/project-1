@@ -20,6 +20,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "name")
+    private String name;
+
     @Column(nullable = false)
     private String firstName;
 
@@ -44,5 +47,24 @@ public class User {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    @PreUpdate
+    public void ensureName() {
+        if (this.name == null || this.name.isBlank()) {
+            String f = this.firstName != null ? this.firstName : "";
+            String l = this.lastName != null ? this.lastName : "";
+            this.name = (f + " " + l).trim();
+            if (this.name.isEmpty()) {
+                this.name = "User";
+            }
+        }
+        if (this.firstName == null || this.firstName.isBlank()) {
+            this.firstName = this.name != null && !this.name.isBlank() ? this.name.split("\\s+")[0] : "User";
+        }
+        if (this.lastName == null || this.lastName.isBlank()) {
+            this.lastName = this.name != null && this.name.contains(" ") ? this.name.substring(this.name.indexOf(' ') + 1) : "Account";
+        }
+    }
 }
 

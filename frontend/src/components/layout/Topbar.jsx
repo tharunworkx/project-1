@@ -21,6 +21,8 @@ import {
   Trash2,
   PanelLeftOpen,
 } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AnimatedSearchBar } from "../ui/AnimatedSearchBar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -129,73 +131,16 @@ export default function Topbar() {
   const [searchFocused, setSearchFocused] = useState(false);
   const searchContainerRef = useRef(null);
 
-  // Notifications State
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      title: "Expense Claim Approved",
-      description: "EXP-2026-081 (₹53,400 - Delta Airlines) approved by Sarah Jenkins.",
-      time: "8 mins ago",
-      unread: true,
-      path: "/expenses",
-      icon: CheckCircle2,
-      color: "text-emerald-500 bg-emerald-500/10",
-    },
-    {
-      id: "notif-2",
-      title: "Budget Threshold Warning",
-      description: "Engineering & Infrastructure budget reached 82.5% of quarterly allocation.",
-      time: "35 mins ago",
-      unread: true,
-      path: "/budgets",
-      icon: AlertTriangle,
-      color: "text-amber-500 bg-amber-500/10",
-    },
-    {
-      id: "notif-3",
-      title: "Duplicate Receipt Flagged",
-      description: "Fraud engine detected matching receipt timestamp on claim EXP-2026-084.",
-      time: "1 hour ago",
-      unread: true,
-      path: "/fraud-detection",
-      icon: ShieldAlert,
-      color: "text-rose-500 bg-rose-500/10",
-    },
-    {
-      id: "notif-4",
-      title: "Card Feed Sync Completed",
-      description: "American Express corporate banking synced 38 new card charges.",
-      time: "2 hours ago",
-      unread: false,
-      path: "/integrations",
-      icon: RefreshCw,
-      color: "text-blue-500 bg-blue-500/10",
-    },
-    {
-      id: "notif-5",
-      title: "Compliance Policy Updated",
-      description: "Policy POL-01 (Mandatory Receipt Requirement) was modified by Admin.",
-      time: "4 hours ago",
-      unread: false,
-      path: "/audit",
-      icon: FileText,
-      color: "text-purple-500 bg-purple-500/10",
-    },
-  ]);
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
-
-  // Filter search results
-  const searchResults = searchQuery.trim()
-    ? searchableItems.filter((item) => {
-        const query = searchQuery.toLowerCase().trim();
-        return (
-          item.title.toLowerCase().includes(query) ||
-          item.subtitle.toLowerCase().includes(query) ||
-          item.type.toLowerCase().includes(query)
-        );
-      })
-    : [];
+  // Memoized search results
+  const searchResults = React.useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase().trim();
+    return searchableItems.filter((item) => (
+      item.title.toLowerCase().includes(query) ||
+      item.subtitle.toLowerCase().includes(query) ||
+      item.type.toLowerCase().includes(query)
+    ));
+  }, [searchQuery]);
 
   // Close search when clicking outside
   useEffect(() => {
@@ -272,35 +217,22 @@ export default function Topbar() {
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Quick Search Input with Live Results Popover */}
           <div ref={searchContainerRef} className="relative hidden md:block w-64 lg:w-80">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSearchFocused(true);
-                }}
-                onFocus={() => setSearchFocused(true)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search expenses, claims, users..."
-                className="h-9 pl-9 pr-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background focus-visible:border-foreground/30 shadow-xs transition-all font-medium"
-              />
-              {/* Clear button (with blue/accent X matching reference image) */}
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSearchFocused(false);
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4.5 flex items-center justify-center rounded-full text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer"
-                  title="Clear search"
-                >
-                  <X className="size-3.5 stroke-[2.5]" />
-                </button>
-              )}
-            </div>
+            <AnimatedSearchBar
+              size="md"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchFocused(true);
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onKeyDown={handleKeyDown}
+              onClear={() => {
+                setSearchQuery("");
+                setSearchFocused(false);
+              }}
+              placeholder="Search expenses, claims, users..."
+            />
+
 
             {/* Live Search Results Dropdown */}
             {searchFocused && searchQuery.trim().length > 0 && (

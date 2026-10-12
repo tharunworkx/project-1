@@ -51,6 +51,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import { Progress } from "@/components/ui/progress";
 import {
   DropdownMenu,
@@ -577,19 +578,21 @@ export const Budgets = () => {
           {/* Filter Bar Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 pt-1 text-xs">
             {/* Search input */}
-            <div className="relative lg:col-span-2">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                type="text"
+            <div className="lg:col-span-2">
+              <AnimatedSearchBar
                 placeholder="Search budget title, project, department..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-8 pl-8 text-xs bg-muted/50 border-border/80"
+                onClear={() => {
+                  setSearch('');
+                  setCurrentPage(1);
+                }}
               />
             </div>
+
 
             {/* Department filter */}
             <div>
