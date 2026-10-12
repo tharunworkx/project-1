@@ -362,7 +362,7 @@ function SidebarContent({
       data-sidebar="content"
       onWheel={handleWheel}
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden scroll-smooth",
+        "flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden scroll-smooth group-data-[collapsible=icon]:[scrollbar-width:none] group-data-[collapsible=icon]:[&::-webkit-scrollbar]:hidden group-data-[collapsible=icon]:[-ms-overflow-style:none]",
         className
       )}
       {...props}

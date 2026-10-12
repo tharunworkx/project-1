@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Check,
   UserCheck,
+  Radio,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import notificationMockService, { subscribeToNotifications } from '@/services/mock/notificationMockService';
+import notificationMockService, { subscribeToNotifications, resolveNotificationLink } from '@/services/mock/notificationMockService';
 
 const getNotifIcon = (type) => {
   const t = (type || '').toLowerCase();
@@ -77,7 +78,7 @@ export const Notifications = () => {
   const handleQuickApprove = async (item) => {
     try {
       setApprovingId(item.id);
-      const res = await notificationMockService.approveUserRegistration(item.userId, item.requestedRole);
+      const res = await notificationMockService.approveUserRegistration(item.userId, item.requestedRole, item.userEmail);
       if (res.success) {
         toastSuccess(`Registration approved for ${item.userEmail}! User can now log in as ${item.requestedRole}.`, 'User Approved');
         loadNotifications();
@@ -92,24 +93,36 @@ export const Notifications = () => {
     }
   };
 
-  const loadNotifications = async () => {
-    setLoading(true);
+  const loadNotifications = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const items = await notificationMockService.getNotifications(filter);
       setNotifications(items);
       const prefs = await notificationMockService.getPreferences();
       setPreferences(prefs);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadNotifications();
-    const unsubscribe = subscribeToNotifications(() => {
-      loadNotifications();
+    loadNotifications(true);
+    const unsubscribe = subscribeToNotifications((detail) => {
+      loadNotifications(false);
+      if (detail?.notif?.title) {
+        toastInfo(`New alert: ${detail.notif.title}`);
+      }
     });
-    return () => unsubscribe();
+
+    // Active real-time sync heartbeat (every 3 seconds)
+    const interval = setInterval(() => {
+      loadNotifications(false);
+    }, 3000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [filter]);
 
   const handleMarkAsRead = async (id) => {
@@ -149,7 +162,7 @@ export const Notifications = () => {
     if (!n.isRead) {
       notificationMockService.markAsRead(n.id);
     }
-    const target = n.link || n.path;
+    const target = resolveNotificationLink(n);
     if (target) {
       navigate(target);
     }
@@ -170,39 +183,62 @@ export const Notifications = () => {
       {/* Top Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <span>Notification Center</span>
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <span>Notification Center</span>
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Real-time
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Real-time corporate notifications, policy warnings, treasury disbursements, and budget alerts.
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border text-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab('feed')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
-              activeTab === 'feed'
-                ? 'bg-card text-foreground shadow-2xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Notification Feed
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('preferences')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'preferences'
-                ? 'bg-card text-foreground shadow-2xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Settings className="size-3.5" />
-            <span>Preferences</span>
-          </button>
+        <div className="flex items-center gap-2">
+          {activeTab === 'feed' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await notificationMockService.simulateRealtimeNotification();
+              }}
+              className="h-8 gap-1.5 text-xs border-emerald-500/30 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 cursor-pointer"
+              title="Test real-time alert trigger"
+            >
+              <Radio className="size-3.5 text-emerald-500 animate-pulse" />
+              <span>Simulate Live Alert</span>
+            </Button>
+          )}
+
+          {/* Tab Switcher */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('feed')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeTab === 'feed'
+                  ? 'bg-card text-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Notification Feed
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('preferences')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'preferences'
+                  ? 'bg-card text-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Settings className="size-3.5" />
+              <span>Preferences</span>
+            </button>
+          </div>
         </div>
       </div>
 

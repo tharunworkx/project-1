@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import notificationMockService, { subscribeToNotifications } from '@/services/mock/notificationMockService';
+import notificationMockService, { subscribeToNotifications, resolveNotificationLink } from '@/services/mock/notificationMockService';
 import { useToast } from '@/context/ToastContext';
 
 const getNotifIcon = (type) => {
@@ -83,8 +83,8 @@ export const NotificationBellDropdown = () => {
     const unsubscribe = subscribeToNotifications(() => {
       loadNotifications();
     });
-    // Active heartbeat check every 5 seconds as fallback
-    const interval = setInterval(loadNotifications, 5000);
+    // Active heartbeat check every 3 seconds as fallback
+    const interval = setInterval(loadNotifications, 3000);
     return () => {
       unsubscribe();
       clearInterval(interval);
@@ -108,7 +108,7 @@ export const NotificationBellDropdown = () => {
     e.stopPropagation();
     try {
       setApprovingId(item.id);
-      const res = await notificationMockService.approveUserRegistration(item.userId, item.requestedRole);
+      const res = await notificationMockService.approveUserRegistration(item.userId, item.requestedRole, item.userEmail);
       if (res.success) {
         toastSuccess(`Registration approved for ${item.userEmail}! User can now log in as ${item.requestedRole}.`, 'User Approved');
         loadNotifications();
@@ -128,7 +128,7 @@ export const NotificationBellDropdown = () => {
       notificationMockService.markAsRead(item.id);
     }
     setOpen(false);
-    const target = item.link || item.path;
+    const target = resolveNotificationLink(item);
     if (target) {
       navigate(target);
     }

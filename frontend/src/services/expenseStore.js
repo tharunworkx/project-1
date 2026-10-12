@@ -69,6 +69,54 @@ const INITIAL_EXPENSES = [
     ],
   },
   {
+    id: 'EXP-2026-083',
+    merchant: 'JetBrains Inc',
+    title: 'All Products Pack Licenses',
+    category: 'Software & Tools',
+    claimant: 'Elena Rostova',
+    email: 'elena.r@company.com',
+    avatarFallback: 'ER',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120',
+    department: 'Engineering',
+    project: 'PRJ-Alpha (Cloud Migration)',
+    paymentMode: 'UPI Reimbursement',
+    amount: '₹94,500.00',
+    numericAmount: 94500,
+    currency: 'INR',
+    date: '04 Oct 2026',
+    status: 'Pending',
+    policyFlag: 'Requires VP Sign-off',
+    justification: 'IDE licenses for backend development sprint.',
+    receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800',
+    proofImage: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800',
+    receiptName: 'jetbrains_licenses.pdf',
+    receiptSize: 310000,
+  },
+  {
+    id: 'EXP-2026-082',
+    merchant: 'Staples Store',
+    title: 'Standing Desk Accessories',
+    category: 'Office Equipment',
+    claimant: 'Carlos Gomez',
+    email: 'carlos.g@company.com',
+    avatarFallback: 'CG',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120',
+    department: 'Operations',
+    project: 'PRJ-Beta (Mobile App)',
+    paymentMode: 'Corporate Card',
+    amount: '₹17,800.00',
+    numericAmount: 17800,
+    currency: 'INR',
+    date: '03 Oct 2026',
+    status: 'Pending',
+    policyFlag: null,
+    justification: 'Ergonomic workstation setup for design review station.',
+    receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800',
+    proofImage: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800',
+    receiptName: 'staples_invoice.pdf',
+    receiptSize: 198000,
+  },
+  {
     id: 'EXP-2026-081',
     merchant: 'Delta Airlines',
     title: 'Flight to Q1 Tech Summit',
@@ -123,6 +171,78 @@ const INITIAL_EXPENSES = [
     ],
   },
   {
+    id: 'EXP-2026-079',
+    merchant: 'Hilton Downtown Austin',
+    title: '3 Nights Lodging - Client Meeting',
+    category: 'Accommodation',
+    claimant: 'Michael Brown',
+    email: 'michael.b@company.com',
+    avatarFallback: 'MB',
+    department: 'Sales',
+    project: 'PRJ-Gamma (Enterprise Sales)',
+    paymentMode: 'Corporate Card',
+    amount: '₹34,500.00',
+    numericAmount: 34500,
+    currency: 'INR',
+    date: '04 Oct 2026',
+    status: 'Approved',
+    justification: 'Hotel accommodation during 3-day enterprise sales review.',
+  },
+  {
+    id: 'EXP-2026-078',
+    merchant: 'The Capital Grille',
+    title: 'Executive Team Dinner',
+    category: 'Food & Dining',
+    claimant: 'Emily Stone',
+    email: 'emily.s@company.com',
+    avatarFallback: 'ES',
+    department: 'Executive',
+    project: 'General Overhead',
+    paymentMode: 'Bank Transfer',
+    amount: '₹26,800.00',
+    numericAmount: 26800,
+    currency: 'INR',
+    date: '03 Oct 2026',
+    status: 'Rejected',
+    justification: 'Dinner with candidate for CTO position.',
+  },
+  {
+    id: 'EXP-2026-077',
+    merchant: 'Apple Store NYC',
+    title: 'M3 USB-C Power Adapter & Cables',
+    category: 'Office Equipment',
+    claimant: 'Alex Morgan',
+    email: 'alex.m@company.com',
+    avatarFallback: 'AM',
+    department: 'Product',
+    project: 'PRJ-Beta (Mobile App)',
+    paymentMode: 'UPI Reimbursement',
+    amount: '₹10,750.00',
+    numericAmount: 10750,
+    currency: 'INR',
+    date: '02 Oct 2026',
+    status: 'Approved',
+    justification: 'Replacement power adapters for onsite demo testing unit.',
+  },
+  {
+    id: 'EXP-2026-076',
+    merchant: 'Uber Technologies',
+    title: 'Airport Transit to Conference',
+    category: 'Fuel & Transit',
+    claimant: 'Marcus Vance',
+    email: 'marcus.v@company.com',
+    avatarFallback: 'MV',
+    department: 'Marketing',
+    project: 'PRJ-Beta (Mobile App)',
+    paymentMode: 'Corporate Card',
+    amount: '₹4,500.00',
+    numericAmount: 4500,
+    currency: 'INR',
+    date: '01 Oct 2026',
+    status: 'Approved',
+    justification: 'Airport ground transit during keynote conference tour.',
+  },
+  {
     id: 'EXP-DRAFT-001',
     merchant: 'Uber Business',
     title: 'Client site transit in Bangalore',
@@ -154,7 +274,22 @@ export const expenseStore = {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map(e => e.id));
+          let changed = false;
+          INITIAL_EXPENSES.forEach(initItem => {
+            if (!existingIds.has(initItem.id)) {
+              parsed.push(initItem);
+              existingIds.add(initItem.id);
+              changed = true;
+            }
+          });
+          if (changed) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          }
+          return parsed;
+        }
       }
       // Initialize with default expenses
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_EXPENSES));
@@ -292,32 +427,98 @@ export const expenseStore = {
     return newExpense;
   },
 
-  updateStatus: (id, newStatus, reason = '') => {
+  updateStatus: (id, newStatus, reason = '', fallbackItem = null) => {
     const list = expenseStore.getExpenses();
     const now = new Date();
+    const dateFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-    let updatedTarget = null;
-    const updatedList = list.map((item) => {
-      if (item.id === id) {
+    const normalizedTargetId = String(id).replace(/^(EXP-|RMB-DB-)/, '');
+    let found = false;
+
+    let updatedList = list.map((item) => {
+      const itemNormalized = String(item.id).replace(/^(EXP-|RMB-DB-)/, '');
+      const matches = item.id === id ||
+        itemNormalized === normalizedTargetId ||
+        (fallbackItem && fallbackItem.dbId && (item.dbId === fallbackItem.dbId || item.id === `EXP-${fallbackItem.dbId}`));
+
+      if (matches) {
+        found = true;
         const history = [...(item.auditHistory || [])];
         history.push({
           step: `Manager Review: ${newStatus}`,
-          user: 'Sarah Connor (Manager)',
+          user: 'Manager',
           time: timeFormatted,
-          status: newStatus === 'Approved' ? 'completed' : 'rejected',
+          status: newStatus.toLowerCase() === 'approved' ? 'completed' : 'rejected',
           notes: reason,
         });
 
-        updatedTarget = {
+        return {
           ...item,
+          ...(fallbackItem ? {
+            claimant: fallbackItem.claimant || item.claimant,
+            email: fallbackItem.email || item.email,
+            merchant: fallbackItem.merchant || item.merchant,
+            title: fallbackItem.title || item.title,
+            category: fallbackItem.category || item.category,
+            department: fallbackItem.department || item.department,
+            amount: fallbackItem.amount || item.amount,
+            numericAmount: fallbackItem.numericAmount || item.numericAmount,
+          } : {}),
           status: newStatus,
           auditHistory: history,
         };
-        return updatedTarget;
       }
       return item;
     });
+
+    if (!found) {
+      const claimantName = fallbackItem?.claimant || fallbackItem?.submittedBy || 'Employee';
+      const initials = fallbackItem?.avatarFallback || claimantName.slice(0, 2).toUpperCase();
+      const numAmount = typeof fallbackItem?.numericAmount === 'number'
+        ? fallbackItem.numericAmount
+        : (parseFloat(String(fallbackItem?.amount || 0).replace(/[^0-9.-]+/g, '')) || 0);
+      const formattedAmount = fallbackItem?.amount && String(fallbackItem?.amount).startsWith('₹')
+        ? fallbackItem.amount
+        : `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+      const newItem = {
+        id: id,
+        dbId: fallbackItem?.dbId || (/^\d+$/.test(normalizedTargetId) ? Number(normalizedTargetId) : null),
+        merchant: fallbackItem?.merchant || fallbackItem?.title || 'Corporate Vendor',
+        title: fallbackItem?.title || fallbackItem?.description || 'Expense Claim',
+        category: fallbackItem?.category || 'General',
+        claimant: claimantName,
+        email: fallbackItem?.email || fallbackItem?.submittedBy || 'employee@company.com',
+        avatarFallback: initials,
+        avatar: fallbackItem?.avatar || null,
+        department: fallbackItem?.department || 'General',
+        paymentMode: fallbackItem?.paymentMode || 'Direct Reimbursement',
+        amount: formattedAmount,
+        numericAmount: numAmount,
+        currency: 'INR',
+        date: fallbackItem?.date || dateFormatted,
+        status: newStatus,
+        policyFlag: fallbackItem?.policyFlag || null,
+        justification: fallbackItem?.justification || fallbackItem?.description || '',
+        receiptUrl: fallbackItem?.receiptUrl || fallbackItem?.proofImage || null,
+        proofImage: fallbackItem?.proofImage || fallbackItem?.receiptUrl || null,
+        receiptName: fallbackItem?.receiptName || null,
+        receiptAttached: !!(fallbackItem?.receiptUrl || fallbackItem?.proofImage),
+        auditHistory: [
+          ...(fallbackItem?.auditHistory || []),
+          {
+            step: `Manager Review: ${newStatus}`,
+            user: 'Manager',
+            time: timeFormatted,
+            status: newStatus.toLowerCase() === 'approved' ? 'completed' : 'rejected',
+            notes: reason,
+          },
+        ],
+        updatedAt: now.toISOString(),
+      };
+      updatedList = [newItem, ...list];
+    }
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
@@ -335,8 +536,8 @@ export const expenseStore = {
         message: `Claim ${id} was marked as ${newStatus}${reason ? `: "${reason}"` : ''} by Manager.`,
         type: newStatus === 'Approved' ? 'Expense Approved' : 'Expense Rejected',
         relatedModule: 'Approvals',
-        link: `/expenses/${id}`,
-        path: `/expenses/${id}`,
+        link: newStatus === 'Approved' ? '/expenses?status=approved' : '/expenses?status=rejected',
+        path: newStatus === 'Approved' ? '/expenses?status=approved' : '/expenses?status=rejected',
         priority: newStatus === 'Approved' ? 'normal' : 'high',
       });
     } catch (notifErr) {
@@ -363,8 +564,8 @@ export const expenseStore = {
     return expenseStore.saveExpense(data, user);
   },
 
-  updateExpenseStatus: (id, newStatus, reason = '') => {
-    return expenseStore.updateStatus(id, newStatus, reason);
+  updateExpenseStatus: (id, newStatus, reason = '', fallbackItem = null) => {
+    return expenseStore.updateStatus(id, newStatus, reason, fallbackItem);
   },
 
   getPendingApprovals: () => {

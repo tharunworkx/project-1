@@ -165,6 +165,13 @@ export const Expenses = () => {
     if (searchParams.get('new') === 'true' || searchParams.get('create') === 'true') {
       setIsCreateModalOpen(true);
     }
+    const statusParam = searchParams.get('status') || searchParams.get('tab');
+    if (statusParam) {
+      const upper = statusParam.toUpperCase();
+      if (['ALL', 'APPROVED', 'PENDING', 'REJECTED'].includes(upper)) {
+        setStatusFilter(upper);
+      }
+    }
   }, [searchParams]);
 
   const loadExpenses = useCallback(async () => {
@@ -282,6 +289,13 @@ export const Expenses = () => {
     return () => unsubscribe();
   }, [loadExpenses]);
 
+  const counts = {
+    all: expenseList.length,
+    pending: expenseList.filter((e) => (e.status || '').toUpperCase() === 'PENDING').length,
+    approved: expenseList.filter((e) => ['APPROVED', 'REIMBURSED'].includes((e.status || '').toUpperCase())).length,
+    rejected: expenseList.filter((e) => (e.status || '').toUpperCase() === 'REJECTED').length,
+  };
+
   const filtered = expenseList.filter((item) => {
     const matchesSearch =
       item.claimant.toLowerCase().includes(search.toLowerCase()) ||
@@ -289,8 +303,12 @@ export const Expenses = () => {
       item.title.toLowerCase().includes(search.toLowerCase()) ||
       item.merchant.toLowerCase().includes(search.toLowerCase());
 
+    const itemStatus = (item.status || '').toUpperCase();
     const matchesStatus =
-      statusFilter === 'ALL' || item.status.toUpperCase() === statusFilter;
+      statusFilter === 'ALL' ||
+      (statusFilter === 'APPROVED'
+        ? ['APPROVED', 'REIMBURSED'].includes(itemStatus)
+        : itemStatus === statusFilter);
 
     return matchesSearch && matchesStatus;
   });
@@ -326,7 +344,7 @@ export const Expenses = () => {
 
       {/* Main Datatable Card matching Image 2 */}
       <Card className="shadow-xs">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-3">
           <div>
             <CardTitle className="text-lg font-semibold text-foreground">
               All Expense Claims
@@ -348,7 +366,15 @@ export const Expenses = () => {
 
             <CustomSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (e.target.value === 'ALL') next.delete('status');
+                  else next.set('status', e.target.value.toLowerCase());
+                  return next;
+                });
+              }}
               triggerClassName="h-8 rounded-full border border-border/80 bg-muted/50 px-3 text-xs w-[125px]"
               options={[
                 { value: "ALL", label: "All Status" },
@@ -359,6 +385,44 @@ export const Expenses = () => {
             />
           </div>
         </CardHeader>
+
+        {/* Respective Section Tabs: All, Pending, Approved, Rejected */}
+        <div className="px-6 pb-3 pt-0 flex items-center gap-1.5 overflow-x-auto border-b border-border/40">
+          {[
+            { key: 'ALL', label: 'All Expenses', count: counts.all },
+            { key: 'PENDING', label: 'Pending', count: counts.pending },
+            { key: 'APPROVED', label: 'Approved', count: counts.approved },
+            { key: 'REJECTED', label: 'Declined / Rejected', count: counts.rejected },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => {
+                setStatusFilter(tab.key);
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (tab.key === 'ALL') next.delete('status');
+                  else next.set('status', tab.key.toLowerCase());
+                  return next;
+                });
+              }}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                statusFilter === tab.key
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                statusFilter === tab.key
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-background/80 text-muted-foreground'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
 
         <CardContent className="p-0">
           <Table>

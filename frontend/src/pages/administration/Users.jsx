@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import userService from '../../services/userService';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import {
@@ -16,7 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  Check,
+  X,
 } from 'lucide-react';
+import notificationMockService, { dispatchRealtimeEvent, NOTIFICATION_EVENT } from '../../services/mock/notificationMockService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table,
@@ -95,10 +99,31 @@ function StatusBadge({ status }) {
 }
 
 export const Users = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState(initialUsers);
   const [search, setSearch] = useState('');
+  const [tabFilter, setTabFilter] = useState(() => searchParams.get('tab') === 'pending' ? 'pending' : 'all');
+  const [actionLoadingId, setActionLoadingId] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [notification, setNotification] = useState('');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'pending') {
+      setTabFilter('pending');
+    } else if (tab === 'all') {
+      setTabFilter('all');
+    }
+  }, [searchParams]);
+
+  const handleSelectTab = (tab) => {
+    setTabFilter(tab);
+    if (tab === 'pending') {
+      setSearchParams({ tab: 'pending' }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  };
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -171,12 +196,120 @@ export const Users = () => {
     loadUsers();
   }, []);
 
-  const filtered = users.filter((u) =>
+  const pendingUsers = users.filter((u) => u.isPending);
+
+  const tabFilteredUsers = users.filter((u) => {
+    if (tabFilter === 'pending') return u.isPending;
+    return true;
+  });
+
+  const filtered = tabFilteredUsers.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     u.department.toLowerCase().includes(search.toLowerCase()) ||
     u.role.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleApproveUser = async (userToApprove) => {
+    setActionLoadingId(userToApprove.id);
+    const cleanRole = userToApprove.role || 'Employee';
+    try {
+      // 1. Update Spring Boot backend
+      try {
+        const backendUsers = await userService.getUsers();
+        const beUser = Array.isArray(backendUsers) && backendUsers.find(
+          (b) => b.email?.toLowerCase().trim() === userToApprove.email?.toLowerCase().trim()
+        );
+        if (beUser?.id) {
+          await userService.updateUser(beUser.id, { role: cleanRole });
+        } else if (userToApprove.rawId && (typeof userToApprove.rawId === 'number' || !isNaN(Number(userToApprove.rawId)))) {
+          await userService.updateUser(userToApprove.rawId, { role: cleanRole });
+        }
+      } catch (beErr) {
+        console.warn('Backend update error (optional):', beErr);
+      }
+
+      // 2. Update Supabase
+      if (isSupabaseConfigured()) {
+        await supabase
+          .from('users')
+          .update({ role: cleanRole, updated_at: new Date().toISOString() })
+          .eq('email', userToApprove.email);
+      }
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userToApprove.id
+            ? { ...u, role: cleanRole, rawRole: cleanRole, isPending: false, status: 'Active', lastActive: 'Just now' }
+            : u
+        )
+      );
+
+      // 3. Dispatch real-time approval event across tabs and listeners
+      dispatchRealtimeEvent(NOTIFICATION_EVENT, {
+        action: 'approveUser',
+        email: userToApprove.email?.toLowerCase().trim(),
+        role: cleanRole,
+        department: userToApprove.department,
+        userId: userToApprove.rawId,
+      });
+
+      try {
+        await notificationMockService.addNotification({
+          title: 'User Registration Approved',
+          message: `${userToApprove.name} (${userToApprove.email}) was approved as ${cleanRole}`,
+          type: 'User Approved',
+          relatedModule: 'Users',
+          link: '/organization/users',
+          priority: 'medium',
+        });
+      } catch {}
+      setNotification(`User approved successfully: ${userToApprove.name} is now active as ${cleanRole}.`);
+      setTimeout(() => setNotification(''), 4000);
+    } catch (err) {
+      console.error('Failed to approve user:', err);
+      alert('Failed to approve user. Please try again.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRejectUser = async (userToReject) => {
+    if (!window.confirm(`Decline signup request for ${userToReject.name} (${userToReject.email})?`)) return;
+    setActionLoadingId(userToReject.id);
+    try {
+      try {
+        const backendUsers = await userService.getUsers();
+        const beUser = Array.isArray(backendUsers) && backendUsers.find(
+          (b) => b.email?.toLowerCase().trim() === userToReject.email?.toLowerCase().trim()
+        );
+        if (beUser?.id) {
+          await userService.deleteUser(beUser.id);
+        } else if (userToReject.rawId && (typeof userToReject.rawId === 'number' || !isNaN(Number(userToReject.rawId)))) {
+          await userService.deleteUser(userToReject.rawId);
+        }
+      } catch (beErr) {}
+
+      if (isSupabaseConfigured()) {
+        await supabase.from('users').delete().eq('email', userToReject.email);
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== userToReject.id));
+
+      dispatchRealtimeEvent(NOTIFICATION_EVENT, {
+        action: 'rejectUser',
+        email: userToReject.email?.toLowerCase().trim(),
+        userId: userToReject.rawId,
+      });
+
+      setNotification(`Registration request declined for ${userToReject.email}.`);
+      setTimeout(() => setNotification(''), 4000);
+    } catch (err) {
+      console.error('Failed to decline user:', err);
+      alert('Failed to decline user.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const handleAddUser = async (e) => {
     e.preventDefault();
@@ -280,6 +413,37 @@ export const Users = () => {
             <CardDescription className="text-xs text-muted-foreground mt-0.5">
               Manage staff credentials, assigned roles, and departmental permissions
             </CardDescription>
+
+            {/* Filter Tabs for All vs Pending Approvals */}
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => handleSelectTab('all')}
+                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors cursor-pointer ${
+                  tabFilter === 'all'
+                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                }`}
+              >
+                All Members ({users.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectTab('pending')}
+                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  tabFilter === 'pending'
+                    ? 'bg-amber-600 text-white font-semibold shadow-2xs'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                }`}
+              >
+                <span>Pending Approvals</span>
+                {pendingUsers.length > 0 && (
+                  <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0 rounded-full font-bold">
+                    {pendingUsers.length}
+                  </Badge>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -294,7 +458,7 @@ export const Users = () => {
 
             <Button
               size="sm"
-              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs"
+              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs cursor-pointer"
               onClick={() => setModalOpen(true)}
             >
               <Plus className="size-3.5" />
@@ -316,7 +480,7 @@ export const Users = () => {
                 <TableHead>DEPARTMENT</TableHead>
                 <TableHead>STATUS</TableHead>
                 <TableHead>LAST ACTIVE</TableHead>
-                <TableHead className="w-12 pr-6 text-right">ACTIONS</TableHead>
+                <TableHead className="w-24 pr-6 text-right">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -355,38 +519,63 @@ export const Users = () => {
                       {user.lastActive}
                     </TableCell>
                     <TableCell className="pr-6 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-7 text-muted-foreground">
-                            <EllipsisVertical className="size-4" />
-                            <span className="sr-only">Actions</span>
+                      {user.isPending ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            disabled={actionLoadingId === user.id}
+                            onClick={() => handleApproveUser(user)}
+                            className="h-7 px-2.5 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-2xs cursor-pointer gap-1"
+                            title="Approve user registration"
+                          >
+                            <Check className="size-3 stroke-[2.5]" />
+                            <span>{actionLoadingId === user.id ? 'Approving...' : 'Approve'}</span>
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                            <Edit2 className="size-4" />
-                            <span>Edit Role & Access</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
-                            <KeyRound className="size-4" />
-                            <span>Reset Credentials</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer text-amber-600 focus:text-amber-600 flex items-center gap-2"
-                            onClick={() => handleDeactivate(user.id)}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={actionLoadingId === user.id}
+                            onClick={() => handleRejectUser(user)}
+                            className="size-7 text-rose-600 hover:bg-rose-500/10 rounded-md cursor-pointer"
+                            title="Decline registration request"
                           >
-                            <UserX className="size-4" />
-                            <span>{user.status === 'Active' ? 'Deactivate User' : 'Reactivate User'}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer text-rose-600 focus:text-rose-600 flex items-center gap-2 font-medium"
-                            onClick={() => handleDeleteUser(user)}
-                          >
-                            <Trash2 className="size-4" />
-                            <span>Delete from Supabase</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <X className="size-3.5 stroke-[2.5]" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="size-7 text-muted-foreground">
+                              <EllipsisVertical className="size-4" />
+                              <span className="sr-only">Actions</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+                              <Edit2 className="size-4" />
+                              <span>Edit Role & Access</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+                              <KeyRound className="size-4" />
+                              <span>Reset Credentials</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer text-amber-600 focus:text-amber-600 flex items-center gap-2"
+                              onClick={() => handleDeactivate(user.id)}
+                            >
+                              <UserX className="size-4" />
+                              <span>{user.status === 'Active' ? 'Deactivate User' : 'Reactivate User'}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer text-rose-600 focus:text-rose-600 flex items-center gap-2 font-medium"
+                              onClick={() => handleDeleteUser(user)}
+                            >
+                              <Trash2 className="size-4" />
+                              <span>Delete from Supabase</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -397,7 +586,7 @@ export const Users = () => {
           {/* Datatable Pagination Footer */}
           <div className="flex items-center justify-between px-6 py-3 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">
             <span>
-              Showing 1 to {filtered.length} of {users.length} users
+              Showing 1 to {filtered.length} of {tabFilteredUsers.length} users
             </span>
             <div className="flex items-center gap-1.5">
               <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled>

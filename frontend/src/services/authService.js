@@ -18,10 +18,7 @@ export const authService = {
   register: async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      if (response.data?.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
+      // Registration is an onboarding request and should not overwrite existing admin/user session
       return response.data;
     } catch (error) {
       const msg = error.response?.data?.message || error.response?.data?.error || error.message || 'Registration failed. Please try again.';

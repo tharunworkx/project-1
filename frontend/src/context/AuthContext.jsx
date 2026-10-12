@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import bcrypt from 'bcryptjs';
 import authService from '../services/authService';
 import { supabase, isSupabaseConfigured } from '../services/supabaseStorage';
+import notificationMockService from '../services/mock/notificationMockService';
 
 const AuthContext = createContext(null);
 
@@ -38,6 +39,16 @@ export const AuthProvider = ({ children }) => {
   // Clean stale mock stores and continuously verify that active user STILL exists in Supabase
   useEffect(() => {
     localStorage.removeItem('registered_users');
+
+    // If current session user is pending approval, immediately revoke it
+    if (user?.role && typeof user.role === 'string' && user.role.startsWith('PENDING:')) {
+      console.warn('Session revoked: Account is pending admin approval.');
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      return;
+    }
 
     const verifyUserStillExistsInSupabase = async () => {
       if (!user?.email || !isSupabaseConfigured()) return;
@@ -91,6 +102,43 @@ export const AuthProvider = ({ children }) => {
       try {
         const data = await authService.login({ email: normalizedEmail, password });
         if (data?.user) {
+          if (data.user.role && data.user.role.startsWith('PENDING:')) {
+            // Check if user was already approved in Supabase
+            let approvedInSupabase = false;
+            let sbRole = null;
+            let sbDept = null;
+            if (isSupabaseConfigured()) {
+              try {
+                const { data: sbUser } = await supabase
+                  .from('users')
+                  .select('role, department')
+                  .eq('email', normalizedEmail)
+                  .maybeSingle();
+                if (sbUser?.role && !sbUser.role.startsWith('PENDING:') && sbUser.role !== 'REJECTED') {
+                  approvedInSupabase = true;
+                  sbRole = sbUser.role;
+                  sbDept = sbUser.department;
+                }
+              } catch {}
+            }
+
+            if (!approvedInSupabase) {
+              const requestedRole = data.user.role.replace('PENDING:', '');
+              throw `Your registration request for "${requestedRole}" is currently awaiting administrator approval. Please wait until an admin approves your account before logging in.`;
+            } else {
+              const userObj = {
+                ...data.user,
+                role: sbRole || options.role || data.user.role.replace('PENDING:', ''),
+                department: sbDept || options.department || data.user.department,
+              };
+              setUser(userObj);
+              setToken(data.token || `token_${Date.now()}`);
+              return userObj;
+            }
+          }
+          if (data.user.role === 'REJECTED') {
+            throw 'Your registration request was declined by an administrator.';
+          }
           const userObj = {
             ...data.user,
             ...(options.role ? { role: options.role } : {}),
@@ -101,6 +149,9 @@ export const AuthProvider = ({ children }) => {
           return userObj;
         }
       } catch (backendErr) {
+        if (typeof backendErr === 'string' && backendErr.includes('awaiting administrator approval')) {
+          throw backendErr;
+        }
         // Backend might be offline or user registered directly via Supabase.
         // Fall through to authoritative Supabase verification.
         console.warn('Backend login unavailable or unmapped, checking Supabase:', backendErr);
@@ -122,6 +173,9 @@ export const AuthProvider = ({ children }) => {
             try {
               const parsed = JSON.parse(localStored);
               if (parsed.email === normalizedEmail) {
+                if (parsed.role && parsed.role.startsWith('PENDING:')) {
+                  throw 'Your registration request is currently awaiting administrator approval.';
+                }
                 setUser(parsed);
                 setToken(`token_${Date.now()}`);
                 return parsed;
@@ -133,6 +187,14 @@ export const AuthProvider = ({ children }) => {
 
         if (!dbUser) {
           throw 'Account not found. You must sign up first before logging in.';
+        }
+
+        if (dbUser.role && dbUser.role.startsWith('PENDING:')) {
+          const requestedRole = dbUser.role.replace('PENDING:', '');
+          throw `Your registration request for "${requestedRole}" is currently awaiting administrator approval. Please wait until an admin approves your account before logging in.`;
+        }
+        if (dbUser.role === 'REJECTED') {
+          throw 'Your registration request was declined by an administrator.';
         }
 
         // 3. Verify Password against BCrypt hash stored in Supabase
@@ -200,6 +262,9 @@ export const AuthProvider = ({ children }) => {
     const lastName = nameParts.slice(1).join(' ') || '';
     const fullName = (userData.name || `${firstName} ${lastName}`).trim() || 'User';
 
+    const requestedRole = userData.role || 'Employee';
+    const requestedDept = userData.department || 'Engineering';
+
     try {
       // 1. Attempt Spring Boot backend registration
       try {
@@ -209,14 +274,30 @@ export const AuthProvider = ({ children }) => {
           lastName: lastName || 'Account',
           email,
           password: userData.password,
-          department: userData.department || 'Engineering',
-          role: userData.role || 'Employee',
+          department: requestedDept,
+          role: `PENDING:${requestedRole}`,
         };
         const data = await authService.register(payload);
         if (data?.user) {
-          setUser(data.user);
-          setToken(data.token || `token_${Date.now()}`);
-          return data.user;
+          try {
+            await notificationMockService.addNotification({
+              title: 'New Signup Request',
+              message: `${fullName} requested to join as ${requestedRole} in ${requestedDept}`,
+              type: 'Access Request',
+              relatedModule: 'Users',
+              link: '/admin/users?tab=pending',
+              priority: 'high',
+            });
+          } catch (notifErr) {
+            console.warn('Could not post admin notification:', notifErr);
+          }
+
+          return {
+            pendingApproval: true,
+            user: data.user,
+            requestedRole,
+            department: requestedDept,
+          };
         }
       } catch (backendErr) {
         const errMsg = typeof backendErr === 'string' ? backendErr : backendErr?.message || '';
@@ -231,11 +312,14 @@ export const AuthProvider = ({ children }) => {
         try {
           const { data: existingUser } = await supabase
             .from('users')
-            .select('id')
+            .select('id, role')
             .eq('email', email)
             .maybeSingle();
 
           if (existingUser) {
+            if (existingUser.role && existingUser.role.startsWith('PENDING:')) {
+              throw 'A registration request for this email is already awaiting administrator approval. Please wait for an admin to approve your request.';
+            }
             throw 'An account with this email already exists. Please log in.';
           }
 
@@ -250,8 +334,8 @@ export const AuthProvider = ({ children }) => {
               last_name: lastName || 'Account',
               email: email,
               password: hashedPassword,
-              department: userData.department || 'Engineering',
-              role: userData.role || 'Employee',
+              department: requestedDept,
+              role: `PENDING:${requestedRole}`,
               created_at: now,
               updated_at: now,
             })
@@ -264,19 +348,23 @@ export const AuthProvider = ({ children }) => {
               throw 'An account with this email already exists. Please log in.';
             }
           } else if (createdUser) {
-            const resolvedName = createdUser.name || `${createdUser.first_name || ''} ${createdUser.last_name || ''}`.trim() || fullName;
-            const sessionUser = {
-              id: createdUser.id,
-              name: resolvedName,
-              email: createdUser.email,
-              role: createdUser.role || userData.role || 'Employee',
-              department: createdUser.department || userData.department || 'Engineering',
-              avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(resolvedName)}`,
-            };
+            try {
+              await notificationMockService.addNotification({
+                title: 'New Signup Request',
+                message: `${fullName} requested to join as ${requestedRole} in ${requestedDept}`,
+                type: 'Access Request',
+                relatedModule: 'Users',
+                link: '/admin/users?tab=pending',
+                priority: 'high',
+              });
+            } catch {}
 
-            setUser(sessionUser);
-            setToken(`supabase_token_${createdUser.id}_${Date.now()}`);
-            return sessionUser;
+            return {
+              pendingApproval: true,
+              user: createdUser,
+              requestedRole,
+              department: requestedDept,
+            };
           }
         } catch (sbErr) {
           if (typeof sbErr === 'string') throw sbErr;
@@ -287,19 +375,24 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // 3. Resilient fallback session: ensures account creation never fails for end user
-      const fallbackUser = {
-        id: `usr_${Date.now()}`,
-        name: fullName,
-        email: email,
-        role: userData.role || 'Employee',
-        department: userData.department || 'Engineering',
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+      // 3. Fallback request object
+      try {
+        await notificationMockService.addNotification({
+          title: 'New Signup Request',
+          message: `${fullName} requested to join as ${requestedRole} in ${requestedDept}`,
+          type: 'Access Request',
+          relatedModule: 'Users',
+          link: '/organization/users',
+          priority: 'high',
+        });
+      } catch {}
+
+      return {
+        pendingApproval: true,
+        user: { name: fullName, email, role: `PENDING:${requestedRole}`, department: requestedDept },
+        requestedRole,
+        department: requestedDept,
       };
-      setUser(fallbackUser);
-      setToken(`local_token_${Date.now()}`);
-      localStorage.setItem('user', JSON.stringify(fallbackUser));
-      return fallbackUser;
     } finally {
       setLoading(false);
     }

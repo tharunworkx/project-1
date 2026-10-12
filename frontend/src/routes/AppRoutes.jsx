@@ -155,6 +155,8 @@ export default function AppRoutes() {
             }
           />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/organization/users" element={<Navigate to="/admin/users?tab=pending" replace />} />
+          <Route path="/organization" element={<Navigate to="/admin/users" replace />} />
 
           <Route
             path="/admin/departments"

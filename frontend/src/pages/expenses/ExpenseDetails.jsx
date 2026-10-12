@@ -68,11 +68,13 @@ export const ExpenseDetails = () => {
       try {
         let dbData = null;
 
-        // Try backend API first if online
-        try {
-          dbData = await expenseService.getExpenseById(cleanId);
-        } catch (apiErr) {
-          // Fall back to Supabase
+        // Try backend API first if online and ID is numeric
+        if (/^\d+$/.test(cleanId)) {
+          try {
+            dbData = await expenseService.getExpenseById(cleanId);
+          } catch (apiErr) {
+            // Fall back to Supabase
+          }
         }
 
         // If not found in backend, query Supabase directly (only if configured)
@@ -201,10 +203,12 @@ export const ExpenseDetails = () => {
     const cleanId = expense.dbId || expense.id?.replace(/^(EXP-|RMB-DB-)/, '');
     const approverName = user?.name || user?.email || 'Approver';
     if (cleanId) {
-      try {
-        await expenseService.approveExpense(cleanId, { approver: approverName });
-      } catch (e) {
-        console.warn('Backend approve offline:', e);
+      if (/^\d+$/.test(cleanId)) {
+        try {
+          await expenseService.approveExpense(cleanId, { approver: approverName });
+        } catch (e) {
+          console.warn('Backend approve offline:', e);
+        }
       }
       try {
         await supabase
@@ -220,7 +224,7 @@ export const ExpenseDetails = () => {
       }
     }
     try {
-      expenseStore.updateStatus(expense.id, 'Approved');
+      expenseStore.updateStatus(expense.id, 'Approved', '', expense);
     } catch (e) {}
     setExpense((prev) => ({ ...prev, status: 'Approved', approvedBy: approverName }));
     setNotification('Expense claim approved successfully!');
@@ -234,10 +238,12 @@ export const ExpenseDetails = () => {
     }
     const cleanId = expense.dbId || expense.id?.replace(/^(EXP-|RMB-DB-)/, '');
     if (cleanId) {
-      try {
-        await expenseService.rejectExpense(cleanId, { reason: rejectReason });
-      } catch (e) {
-        console.warn('Backend reject offline:', e);
+      if (/^\d+$/.test(cleanId)) {
+        try {
+          await expenseService.rejectExpense(cleanId, { reason: rejectReason });
+        } catch (e) {
+          console.warn('Backend reject offline:', e);
+        }
       }
       try {
         await supabase
@@ -252,7 +258,7 @@ export const ExpenseDetails = () => {
       }
     }
     try {
-      expenseStore.updateStatus(expense.id, 'Rejected', rejectReason);
+      expenseStore.updateStatus(expense.id, 'Rejected', rejectReason, expense);
     } catch (e) {}
     setExpense((prev) => ({ ...prev, status: 'Rejected' }));
     setRejectModalOpen(false);

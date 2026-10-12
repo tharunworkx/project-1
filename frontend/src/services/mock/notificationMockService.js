@@ -7,17 +7,29 @@ const PREFS_STORAGE_KEY = 'ems_person3_notification_preferences';
 export const NOTIFICATION_EVENT = 'ems_notification_update';
 export const EXPENSES_EVENT = 'ems_expenses_updated';
 
+let broadcastChannelInstance = null;
+const getBroadcastChannel = () => {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return null;
+  if (!broadcastChannelInstance) {
+    try {
+      broadcastChannelInstance = new BroadcastChannel('ems_realtime_sync');
+    } catch (e) {
+      console.warn('BroadcastChannel error:', e);
+    }
+  }
+  return broadcastChannelInstance;
+};
+
 /**
- * Real-time event dispatcher supporting both local window events and cross-tab BroadcastChannel
+ * Real-time event dispatcher supporting local window events and persistent cross-tab BroadcastChannel
  */
 export const dispatchRealtimeEvent = (eventName, detail = {}) => {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
     try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        const bc = new BroadcastChannel('ems_realtime_sync');
+      const bc = getBroadcastChannel();
+      if (bc) {
         bc.postMessage({ eventName, detail, timestamp: Date.now() });
-        bc.close();
       }
     } catch (e) {
       // ignore
@@ -44,18 +56,15 @@ export const subscribeToNotifications = (callback) => {
   window.addEventListener(NOTIFICATION_EVENT, handleEvent);
   window.addEventListener('storage', handleStorage);
 
-  let bc = null;
-  try {
-    if (typeof BroadcastChannel !== 'undefined') {
-      bc = new BroadcastChannel('ems_realtime_sync');
-      bc.onmessage = (msg) => {
-        if (msg.data?.eventName === NOTIFICATION_EVENT) {
-          callback(msg.data?.detail);
-        }
-      };
+  const bc = getBroadcastChannel();
+  const handleBcMessage = (msg) => {
+    if (msg.data?.eventName === NOTIFICATION_EVENT) {
+      callback(msg.data?.detail);
     }
-  } catch (e) {
-    // ignore
+  };
+
+  if (bc) {
+    bc.addEventListener('message', handleBcMessage);
   }
 
   return () => {
@@ -63,7 +72,7 @@ export const subscribeToNotifications = (callback) => {
     window.removeEventListener('storage', handleStorage);
     if (bc) {
       try {
-        bc.close();
+        bc.removeEventListener('message', handleBcMessage);
       } catch (e) {
         // ignore
       }
@@ -76,16 +85,16 @@ if (typeof window !== 'undefined') {
   try {
     supabase
       .channel('ems_users_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
-        dispatchRealtimeEvent(NOTIFICATION_EVENT, { source: 'supabase_users' });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+        dispatchRealtimeEvent(NOTIFICATION_EVENT, { source: 'supabase_users', payload });
       })
       .subscribe();
 
     supabase
       .channel('ems_expenses_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
-        dispatchRealtimeEvent(EXPENSES_EVENT, { source: 'supabase_expenses' });
-        dispatchRealtimeEvent(NOTIFICATION_EVENT, { source: 'supabase_expenses' });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, (payload) => {
+        dispatchRealtimeEvent(EXPENSES_EVENT, { source: 'supabase_expenses', payload });
+        dispatchRealtimeEvent(NOTIFICATION_EVENT, { source: 'supabase_expenses', payload });
       })
       .subscribe();
   } catch (err) {
@@ -150,8 +159,8 @@ export const getPendingUserNotifications = async () => {
             message: `${fullName} (${u.email}) requested registration as ${cleanRole} in ${u.department || 'the team'}. Administrator approval required before login.`,
             type: 'Approval Pending',
             relatedModule: 'System',
-            link: '/admin/users',
-            path: '/admin/users',
+            link: '/admin/users?tab=pending',
+            path: '/admin/users?tab=pending',
             isPendingUserApproval: true,
             isRead: false,
             priority: 'high',
@@ -164,6 +173,83 @@ export const getPendingUserNotifications = async () => {
     console.warn('Could not query pending registrations from Supabase:', err);
   }
   return [];
+};
+
+/**
+ * Smart resolver to map any notification to its corresponding application workspace
+ */
+export const resolveNotificationLink = (item) => {
+  if (!item) return '/dashboard';
+
+  const title = (item.title || '').toLowerCase();
+  const type = (item.type || '').toLowerCase();
+  const module = (item.relatedModule || '').toLowerCase();
+  const message = (item.message || '').toLowerCase();
+
+  // 1. User Signup / Access Requests -> Admin Users Pending Tab
+  if (
+    title.includes('signup') ||
+    title.includes('registration') ||
+    title.includes('new account') ||
+    type.includes('access request') ||
+    type.includes('approval pending') ||
+    item.isPendingUserApproval ||
+    (module === 'users' && (title.includes('approval') || message.includes('requested') || message.includes('signup'))) ||
+    (module === 'system' && (title.includes('account') || title.includes('registration')))
+  ) {
+    return '/admin/users?tab=pending';
+  }
+
+  // 2. Active User Approvals / General User actions
+  if (title.includes('user approved') || module === 'users') {
+    return '/admin/users';
+  }
+
+  // 3. Approvals queue (claims requiring manager/finance review)
+  if (
+    type.includes('expense submission') ||
+    title.includes('claim submitted') ||
+    title.includes('pending approval') ||
+    module === 'approvals'
+  ) {
+    return '/approvals';
+  }
+
+  // 4. General Expenses list
+  if (type.includes('expense approved') || type.includes('expense rejected') || module === 'expenses') {
+    return '/expenses';
+  }
+
+  // 5. Reimbursements
+  if (type.includes('reimbursement') || module === 'reimbursements' || module === 'reimbursement') {
+    return '/reimbursements';
+  }
+
+  // 6. Budgets
+  if (type.includes('budget') || module === 'budgets' || module === 'budget') {
+    return '/budgets';
+  }
+
+  // 7. Reports & Analytics
+  if (type.includes('report') || module === 'reports' || module === 'analytics') {
+    return '/reports';
+  }
+
+  // 8. Fraud & Policy violations
+  if (type.includes('policy') || type.includes('fraud') || module === 'compliance' || module === 'fraud') {
+    return '/fraud-detection';
+  }
+
+  // 9. Normalize raw links
+  const rawTarget = item.link || item.path || '';
+  if (rawTarget) {
+    if (rawTarget.includes('/organization/users') || rawTarget.includes('/users')) {
+      return '/admin/users?tab=pending';
+    }
+    return rawTarget;
+  }
+
+  return '/notifications';
 };
 
 export const notificationMockService = {
@@ -190,14 +276,37 @@ export const notificationMockService = {
     return pendingNotifs.length + items.filter((n) => !n.isRead).length;
   },
 
-  approveUserRegistration: async (userId, targetRole) => {
+  approveUserRegistration: async (userId, targetRole, userEmail = null) => {
     const cleanRole = targetRole || 'Employee';
     const now = new Date().toISOString();
+
+    let targetEmail = userEmail;
+    let targetDept = 'General';
+
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('id, email, department')
+        .eq('id', userId)
+        .maybeSingle();
+      if (data) {
+        if (!targetEmail) targetEmail = data.email;
+        if (data.department) targetDept = data.department;
+      }
+    } catch (e) {}
+
     const { error } = await supabase
       .from('users')
       .update({ role: cleanRole, updated_at: now })
       .eq('id', userId);
-    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'approveUser', userId });
+
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, {
+      action: 'approveUser',
+      userId,
+      email: targetEmail?.toLowerCase().trim(),
+      role: cleanRole,
+      department: targetDept,
+    });
     return { success: !error, error };
   },
 
@@ -267,6 +376,58 @@ export const notificationMockService = {
     localStorage.setItem(NOTIFS_STORAGE_KEY, JSON.stringify(mockNotificationsData));
     dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'reset' });
     return mockNotificationsData;
+  },
+
+  simulateRealtimeNotification: async () => {
+    const samples = [
+      {
+        title: 'High-Value Claim Submitted',
+        message: 'A travel expense claim of ₹45,200 for international conference flight was submitted by Rahul Sharma.',
+        type: 'Approval Pending',
+        relatedModule: 'Expense',
+        link: '/approvals',
+        priority: 'high',
+        time: 'Just now',
+      },
+      {
+        title: 'Budget Threshold Warning',
+        message: 'Engineering Q4 Cloud Infrastructure budget reached 85% of allocated limits.',
+        type: 'Budget Near Limit',
+        relatedModule: 'Budget',
+        link: '/budgets',
+        priority: 'high',
+        time: 'Just now',
+      },
+      {
+        title: 'Perceptual AI Fraud Flag',
+        message: 'Heuristic engine flagged duplicate receipt pattern for Hotel Hilton claim #EXP-908.',
+        type: 'Policy Violation',
+        relatedModule: 'System',
+        link: '/fraud-detection',
+        priority: 'high',
+        time: 'Just now',
+      },
+      {
+        title: 'Treasury Settlement Dispatched',
+        message: 'Batch payment disbursement of ₹1,24,000 processed via Corporate Direct Deposit.',
+        type: 'Reimbursement Processed',
+        relatedModule: 'Reimbursement',
+        link: '/reimbursements',
+        priority: 'normal',
+        time: 'Just now',
+      },
+      {
+        title: 'Expense Claim Approved',
+        message: 'Your recent business meal expense for ₹3,450 was approved by Department Head.',
+        type: 'Expense Approved',
+        relatedModule: 'Expense',
+        link: '/expenses',
+        priority: 'normal',
+        time: 'Just now',
+      },
+    ];
+    const picked = samples[Math.floor(Math.random() * samples.length)];
+    return notificationMockService.addNotification(picked);
   },
 };
 

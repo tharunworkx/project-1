@@ -80,7 +80,7 @@ const AnimatedSearchBar = React.forwardRef(function AnimatedSearchBar(
       {/* Pill Container Box with glowing focus ring */}
       <div
         className={cn(
-          'relative w-full flex items-center rounded-full border transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          'relative w-full flex items-center rounded-full border overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
           'bg-card/75 dark:bg-muted/30 backdrop-blur-xs shadow-xs',
           'border-border/80 dark:border-border/60 hover:border-border',
           isFocused
@@ -92,7 +92,7 @@ const AnimatedSearchBar = React.forwardRef(function AnimatedSearchBar(
         <Search
           aria-hidden="true"
           className={cn(
-            'absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300 text-muted-foreground animate-jitter-icon',
+            'absolute top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300 text-muted-foreground animate-jitter-icon shrink-0',
             iconSize,
             isFocused
               ? 'text-primary scale-110 -rotate-6'
@@ -119,7 +119,7 @@ const AnimatedSearchBar = React.forwardRef(function AnimatedSearchBar(
           }}
           placeholder={isFocused ? placeholder : ''}
           className={cn(
-            'w-full bg-transparent text-foreground placeholder:text-muted-foreground/60 outline-none rounded-full transition-colors',
+            'w-full bg-transparent text-foreground placeholder:text-muted-foreground/60 placeholder:truncate outline-none rounded-full transition-colors truncate',
             sizeClasses,
             className
           )}
@@ -132,22 +132,24 @@ const AnimatedSearchBar = React.forwardRef(function AnimatedSearchBar(
             aria-hidden="true"
             onClick={() => internalInputRef.current?.focus()}
             className={cn(
-              'absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-muted-foreground/75 truncate pr-6 overflow-hidden flex items-center',
-              size === 'md' ? 'left-9 text-xs' : 'left-8 text-xs'
+              'absolute top-1/2 -translate-y-1/2 pointer-events-none select-none text-muted-foreground/75 overflow-hidden flex items-center whitespace-nowrap min-w-0',
+              size === 'md' ? 'left-9 right-8 text-xs' : 'left-8 right-7 text-xs'
             )}
           >
-            {placeholderChars.map((char, index) => (
-              <span
-                key={index}
-                className="animate-jitter-letter"
-                style={{
-                  animationDelay: `${Math.min(index * 22, 600)}ms`,
-                  whiteSpace: char === ' ' ? 'pre' : 'normal',
-                }}
-              >
-                {char}
-              </span>
-            ))}
+            <div className="flex items-center overflow-hidden truncate min-w-0">
+              {placeholderChars.map((char, index) => (
+                <span
+                  key={index}
+                  className="animate-jitter-letter shrink-0"
+                  style={{
+                    animationDelay: `${Math.min(index * 22, 600)}ms`,
+                    whiteSpace: char === ' ' ? 'pre' : 'normal',
+                  }}
+                >
+                  {char}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 

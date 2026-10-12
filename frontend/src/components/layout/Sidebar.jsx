@@ -96,8 +96,8 @@ function CollapsibleNavItem({ item, location }) {
               className={cn(
                 "size-9! p-0! justify-center! mx-auto! rounded-xl cursor-pointer transition-colors",
                 isAnyChildActive
-                  ? "bg-zinc-200! text-zinc-950! shadow-xs border border-zinc-300/70 dark:bg-zinc-800! dark:text-white! dark:border dark:border-zinc-700/60 font-semibold"
-                  : "bg-transparent text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/60"
+                  ? "bg-zinc-200! text-zinc-950! shadow-xs border border-zinc-300/70 dark:bg-zinc-800! dark:text-white! dark:border dark:border-zinc-700/60"
+                  : "bg-transparent text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/60"
               )}
             >
               <Icon className={cn("size-4.5 shrink-0", isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-600 dark:text-zinc-400")} />
@@ -118,15 +118,14 @@ function CollapsibleNavItem({ item, location }) {
                     <NavLink
                       to={subItem.href}
                       className={cn(
-                        "flex items-center gap-2.5 w-full px-2.5 py-2 text-xs rounded-xl transition-colors font-medium cursor-pointer",
+                        "flex items-center gap-2.5 w-full px-2.5 py-2 text-sm rounded-xl transition-colors font-normal cursor-pointer",
                         isSubActive
-                          ? "bg-zinc-100 text-zinc-950 font-semibold dark:bg-zinc-800/90 dark:text-white"
-                          : "text-zinc-700 hover:bg-zinc-100/80 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-white"
+                          ? "bg-zinc-100 text-zinc-950 font-medium dark:bg-zinc-800/90 dark:text-white"
+                          : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-white"
                       )}
                     >
                       <SubIcon className={cn("size-4 shrink-0", isSubActive ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400")} />
                       <span className="flex-1 truncate">{subItem.label}</span>
-                      {isSubActive && <Check className="size-4 text-sky-500 dark:text-sky-400 shrink-0 ml-1.5" />}
                     </NavLink>
                   </DropdownMenuItem>
                 );
@@ -143,23 +142,20 @@ function CollapsibleNavItem({ item, location }) {
     <SidebarMenuItem className="w-full">
       <SidebarMenuButton
         tooltip={item.label}
-        isActive={isAnyChildActive}
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "h-10 rounded-xl px-3 transition-colors cursor-pointer w-full justify-between select-none",
-          isAnyChildActive
-            ? "bg-zinc-200! text-zinc-950! font-semibold shadow-xs border border-zinc-300/70 dark:bg-zinc-800! dark:text-white! dark:border dark:border-zinc-700/60"
-            : "text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/60"
+          "h-10 rounded-xl px-3 transition-colors cursor-pointer w-full justify-between select-none text-sm font-normal",
+          "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/40"
         )}
       >
         <div className="flex items-center gap-2.5 truncate">
-          <Icon className={cn("size-4.5 shrink-0", isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-300")} />
-          <span className="truncate font-medium">{item.label}</span>
+          <Icon className="size-4.5 shrink-0 text-zinc-600 dark:text-zinc-400" />
+          <span className="truncate text-sm font-normal">{item.label}</span>
         </div>
         <ChevronRight
           className={cn(
-            "size-4 shrink-0 transition-transform duration-200",
-            isOpen ? "rotate-90 text-zinc-950 dark:text-white" : "text-zinc-400 dark:text-zinc-500"
+            "size-4 shrink-0 transition-transform duration-200 text-zinc-400 dark:text-zinc-500",
+            isOpen ? "rotate-90 text-zinc-600 dark:text-zinc-300" : ""
           )}
         />
       </SidebarMenuButton>
@@ -175,15 +171,14 @@ function CollapsibleNavItem({ item, location }) {
                 key={subItem.label}
                 to={subItem.href}
                 className={cn(
-                  "flex items-center gap-2.5 w-full px-3 py-2 text-xs sm:text-sm rounded-xl transition-colors font-medium cursor-pointer",
+                  "flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-xl transition-colors cursor-pointer",
                   isSubActive
-                    ? "bg-zinc-200 text-zinc-950 font-semibold shadow-2xs dark:bg-zinc-800 dark:text-white"
-                    : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-white"
+                    ? "bg-zinc-200 text-zinc-950 font-medium shadow-xs border border-zinc-300/70 dark:bg-zinc-800 dark:text-white dark:border dark:border-zinc-700/60"
+                    : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800/40 dark:hover:text-white font-normal"
                 )}
               >
                 <SubIcon className={cn("size-4 shrink-0", isSubActive ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400")} />
-                <span className="flex-1 truncate">{subItem.label}</span>
-                {isSubActive && <Check className="size-3.5 text-sky-500 dark:text-sky-400 shrink-0 ml-1.5" />}
+                <span className="flex-1 truncate text-sm">{subItem.label}</span>
               </NavLink>
             );
           })}
@@ -203,9 +198,9 @@ const NAV_GROUPS = [
         icon: LayoutDashboard,
       },
       {
-        label: "Finance Analytics",
-        href: "/finance",
-        icon: Landmark,
+        label: "Financial Analytics & Reports",
+        href: "/reports",
+        icon: BarChart3,
       },
     ],
   },
@@ -243,11 +238,6 @@ const NAV_GROUPS = [
         label: "Budgets",
         href: "/budgets",
         icon: PieChart,
-      },
-      {
-        label: "Financial Reports",
-        href: "/reports",
-        icon: BarChart3,
       },
     ],
   },
@@ -343,11 +333,10 @@ export function AppSidebar({ ...props }) {
               return { ...item, childItems: filteredChildren };
             }
 
-            if (item.href === "/finance") return isFinanceTeam ? item : null;
             if (item.href === "/approvals") return (isManager || isFinanceTeam) ? item : null;
             if (item.href === "/fraud-detection") return (isCFO || isAdmin) ? item : null;
             if (item.href === "/budgets") return (isManager || isFinanceTeam) ? item : null;
-            if (item.href === "/reports") return (isManager || isFinanceTeam) ? item : null;
+            if (item.href === "/reports") return item;
             if (item.href === "/audit") return isFinanceTeam ? item : null;
             if (item.href === "/integrations") return isAdmin ? item : null;
             if (item.href === "/monitoring") return (isCFO || isAdmin) ? item : null;
@@ -385,7 +374,7 @@ export function AppSidebar({ ...props }) {
       </SidebarHeader>
 
       {/* 2. Menu Navigation without group title words */}
-      <SidebarContent className="px-2 py-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2 pb-20">
+      <SidebarContent className="px-2 py-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2 pb-20 group-data-[collapsible=icon]:[scrollbar-width:none] group-data-[collapsible=icon]:[&::-webkit-scrollbar]:hidden group-data-[collapsible=icon]:[-ms-overflow-style:none]">
         {filteredNavGroups.map((group, groupIdx) => (
           <SidebarGroup key={group.groupLabel || groupIdx} className="py-0.5 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:my-0.5">
             <SidebarGroupContent>

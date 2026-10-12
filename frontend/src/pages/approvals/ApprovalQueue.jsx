@@ -4,6 +4,7 @@ import expenseService from '../../services/expenseService';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import { useAuth } from '../../context/AuthContext';
 import expenseStore, { subscribeToExpenses } from '../../services/expenseStore';
+import notificationMockService from '../../services/mock/notificationMockService';
 import {
   Check,
   X,
@@ -38,7 +39,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const pendingApprovalsData = [
   {
@@ -148,10 +148,27 @@ function StatusBadge({ status }) {
 export const ApprovalQueue = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [items, setItems] = useState(pendingApprovalsData);
+  const [items, setItems] = useState(() => {
+    try {
+      const storeAll = expenseStore.getExpenses() || [];
+      const nonPendingIds = new Set();
+      storeAll.forEach((e) => {
+        if (e.status && e.status.toLowerCase() !== 'pending') {
+          nonPendingIds.add(e.id);
+          nonPendingIds.add(String(e.id).replace(/^(EXP-|RMB-DB-)/, ''));
+          nonPendingIds.add(`EXP-${e.id}`);
+        }
+      });
+      return pendingApprovalsData.filter((i) => {
+        const stripped = String(i.id).replace(/^(EXP-|RMB-DB-)/, '');
+        return !nonPendingIds.has(i.id) && !nonPendingIds.has(stripped) && !nonPendingIds.has(`EXP-${stripped}`);
+      });
+    } catch {
+      return pendingApprovalsData;
+    }
+  });
   const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [notification, setNotification] = useState('');
+  const [notification, setNotification] = useState(null);
 
   // Role check: Only Managers, Finance, and Admins can access Approval Queue!
   const roleLower = (user?.role || 'employee').toLowerCase();
@@ -250,14 +267,38 @@ export const ApprovalQueue = () => {
           };
         });
 
-        // Merge: local store -> DB -> mock pending
+        // Gather all items that have already been approved or rejected so they never resurrect
+        const storeAll = expenseStore.getExpenses() || [];
+        const nonPendingIds = new Set();
+        storeAll.forEach((e) => {
+          if (e.status && e.status.toLowerCase() !== 'pending') {
+            nonPendingIds.add(e.id);
+            nonPendingIds.add(String(e.id).replace(/^(EXP-|RMB-DB-)/, ''));
+            nonPendingIds.add(`EXP-${e.id}`);
+          }
+        });
+
+        const isNonPending = (id) => {
+          const stripped = String(id).replace(/^(EXP-|RMB-DB-)/, '');
+          return nonPendingIds.has(id) || nonPendingIds.has(stripped) || nonPendingIds.has(`EXP-${stripped}`);
+        };
+
+        // Merge: local store -> DB -> mock pending (strictly excluding non-pending)
         const mergedMap = new Map();
-        localPending.forEach((item) => mergedMap.set(item.id, item));
+        localPending.forEach((item) => {
+          if (!isNonPending(item.id)) {
+            mergedMap.set(item.id, item);
+          }
+        });
         pendingFromDb.forEach((item) => {
-          if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+          if (!isNonPending(item.id)) {
+            mergedMap.set(item.id, item);
+          }
         });
         pendingApprovalsData.forEach((item) => {
-          if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+          if (!isNonPending(item.id) && !mergedMap.has(item.id)) {
+            mergedMap.set(item.id, item);
+          }
         });
 
         setItems(Array.from(mergedMap.values()));
@@ -273,94 +314,21 @@ export const ApprovalQueue = () => {
     return () => unsubscribe();
   }, []);
 
-  const toggleSelect = (id) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === filtered.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filtered.map((i) => i.id));
-    }
-  };
-
   const handleApprove = async (id) => {
     const item = items.find((i) => i.id === id);
     const approverName = user?.name || user?.email || 'Approver';
-    if (item?.dbId) {
+    const cleanId = item?.dbId || (String(id).replace(/^(EXP-|RMB-DB-)/, ''));
+
+    // Optimistically remove from state immediately so user sees instant update
+    setItems((prev) => prev.filter((i) => i.id !== id && String(i.id).replace(/^(EXP-|RMB-DB-)/, '') !== cleanId));
+
+    if (cleanId && /^\d+$/.test(cleanId)) {
       try {
-        await expenseService.approveExpense(item.dbId, { approver: approverName });
+        await expenseService.approveExpense(Number(cleanId), { approver: approverName });
       } catch (err) {
         console.warn('Backend approval skipped/offline:', err);
       }
-      try {
-        await supabase
-          .from('expenses')
-          .update({
-            status: 'APPROVED',
-            approved_by: approverName,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.dbId);
-      } catch (dbErr) {
-        console.error('Supabase approval update error:', dbErr);
-      }
-    }
-    try {
-      expenseStore.updateExpenseStatus(id, 'Approved');
-    } catch (e) {
-      // ignore
-    }
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    setSelectedIds((prev) => prev.filter((i) => i !== id));
-    setNotification(`Claim ${id} approved successfully`);
-    setTimeout(() => setNotification(''), 4000);
-  };
-
-  const handleReject = async (id) => {
-    const item = items.find((i) => i.id === id);
-    if (item?.dbId) {
-      try {
-        await expenseService.rejectExpense(item.dbId);
-      } catch (err) {
-        console.warn('Backend reject skipped/offline:', err);
-      }
-      try {
-        await supabase
-          .from('expenses')
-          .update({
-            status: 'REJECTED',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.dbId);
-      } catch (dbErr) {
-        console.error('Supabase reject update error:', dbErr);
-      }
-    }
-    try {
-      expenseStore.updateExpenseStatus(id, 'Rejected');
-    } catch (e) {
-      // ignore
-    }
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    setSelectedIds((prev) => prev.filter((i) => i !== id));
-    setNotification(`Claim ${id} rejected`);
-    setTimeout(() => setNotification(''), 4000);
-  };
-
-  const handleBatchApprove = async () => {
-    const approverName = user?.name || user?.email || 'Approver';
-    for (const id of selectedIds) {
-      const item = items.find((i) => i.id === id);
-      if (item?.dbId) {
-        try {
-          await expenseService.approveExpense(item.dbId, { approver: approverName });
-        } catch (err) {
-          console.warn('Backend batch approve skipped/offline:', err);
-        }
+      if (isSupabaseConfigured()) {
         try {
           await supabase
             .from('expenses')
@@ -369,21 +337,107 @@ export const ApprovalQueue = () => {
               approved_by: approverName,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', item.dbId);
+            .eq('id', cleanId);
         } catch (dbErr) {
-          console.error('Supabase batch approval error:', dbErr);
+          console.error('Supabase approval update error:', dbErr);
         }
       }
+    } else {
       try {
-        expenseStore.updateExpenseStatus(id, 'Approved');
-      } catch (e) {
-        // ignore
-      }
+        const allDb = await expenseService.getExpenses();
+        const match = Array.isArray(allDb) && allDb.find(e => 
+          (e.submittedBy?.toLowerCase() === item?.email?.toLowerCase() || e.submittedBy === item?.claimant) &&
+          Math.abs(Number(e.amount) - (item?.numericAmount || 0)) < 0.01
+        );
+        if (match?.id) {
+          await expenseService.approveExpense(match.id, { approver: approverName });
+        }
+      } catch (e) {}
     }
-    setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
-    setNotification(`Batch approved ${selectedIds.length} expense claims`);
-    setSelectedIds([]);
-    setTimeout(() => setNotification(''), 4000);
+
+    try {
+      expenseStore.updateExpenseStatus(id, 'Approved', '', item);
+    } catch (e) {}
+
+    try {
+      notificationMockService.addNotification({
+        title: 'Expense Claim Approved',
+        message: `Claim ${id} (${item?.amount || 'Expense'}) for ${item?.claimant || 'Employee'} was approved by ${approverName}.`,
+        type: 'Expense Approved',
+        relatedModule: 'Expense',
+        link: '/expenses?status=approved',
+        priority: 'normal',
+        time: 'Just now',
+      });
+    } catch (e) {}
+
+    setNotification({
+      text: `Claim ${id} approved successfully. Moved to Approved expenses section.`,
+      link: '/expenses?status=approved'
+    });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleReject = async (id) => {
+    const item = items.find((i) => i.id === id);
+    const cleanId = item?.dbId || (String(id).replace(/^(EXP-|RMB-DB-)/, ''));
+
+    // Optimistically remove from state immediately so user sees instant update
+    setItems((prev) => prev.filter((i) => i.id !== id && String(i.id).replace(/^(EXP-|RMB-DB-)/, '') !== cleanId));
+
+    if (cleanId && /^\d+$/.test(cleanId)) {
+      try {
+        await expenseService.rejectExpense(Number(cleanId));
+      } catch (err) {
+        console.warn('Backend reject skipped/offline:', err);
+      }
+      if (isSupabaseConfigured()) {
+        try {
+          await supabase
+            .from('expenses')
+            .update({
+              status: 'REJECTED',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', cleanId);
+        } catch (dbErr) {
+          console.error('Supabase reject update error:', dbErr);
+        }
+      }
+    } else {
+      try {
+        const allDb = await expenseService.getExpenses();
+        const match = Array.isArray(allDb) && allDb.find(e => 
+          (e.submittedBy?.toLowerCase() === item?.email?.toLowerCase() || e.submittedBy === item?.claimant) &&
+          Math.abs(Number(e.amount) - (item?.numericAmount || 0)) < 0.01
+        );
+        if (match?.id) {
+          await expenseService.rejectExpense(match.id);
+        }
+      } catch (e) {}
+    }
+
+    try {
+      expenseStore.updateExpenseStatus(id, 'Rejected', '', item);
+    } catch (e) {}
+
+    try {
+      notificationMockService.addNotification({
+        title: 'Expense Claim Rejected',
+        message: `Claim ${id} (${item?.amount || 'Expense'}) for ${item?.claimant || 'Employee'} was rejected.`,
+        type: 'Expense Rejected',
+        relatedModule: 'Expense',
+        link: '/expenses?status=rejected',
+        priority: 'high',
+        time: 'Just now',
+      });
+    } catch (e) {}
+
+    setNotification({
+      text: `Claim ${id} declined. Moved to Declined / Rejected expenses section.`,
+      link: '/expenses?status=rejected'
+    });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   const filtered = items.filter(
@@ -412,9 +466,16 @@ export const ApprovalQueue = () => {
     <div className="space-y-6">
       {/* Notification Toast */}
       {notification && (
-        <div className="flex items-center gap-2 p-3 text-xs font-semibold rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="size-4" />
-          <span>{notification}</span>
+        <div className="flex items-center justify-between p-3 text-xs font-semibold rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="size-4 shrink-0" />
+            <span>{typeof notification === 'string' ? notification : notification.text}</span>
+          </div>
+          {typeof notification === 'object' && notification?.link && (
+            <Link to={notification.link} className="underline font-bold hover:opacity-80 ml-3 shrink-0">
+              View in Expenses &rarr;
+            </Link>
+          )}
         </div>
       )}
 
@@ -440,17 +501,10 @@ export const ApprovalQueue = () => {
               />
             </div>
 
-            {selectedIds.length > 0 ? (
-              <Button size="sm" className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-xs" onClick={handleBatchApprove}>
-                <Check className="size-3.5" />
-                <span>Approve ({selectedIds.length})</span>
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
-                <Download className="size-3.5" />
-                <span>Export</span>
-              </Button>
-            )}
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
+              <Download className="size-3.5" />
+              <span>Export</span>
+            </Button>
           </div>
         </CardHeader>
 
@@ -458,13 +512,7 @@ export const ApprovalQueue = () => {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10 pl-6">
-                  <Checkbox
-                    checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>EMPLOYEE</TableHead>
+                <TableHead className="pl-6">EMPLOYEE</TableHead>
                 <TableHead>CATEGORY</TableHead>
                 <TableHead>DATE</TableHead>
                 <TableHead>PAYMENT MODE</TableHead>
@@ -476,7 +524,7 @@ export const ApprovalQueue = () => {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-2" />
                     <p className="font-semibold text-foreground">Queue is completely cleared!</p>
                     <p className="text-xs text-muted-foreground mt-0.5">No pending claims requiring review</p>
@@ -484,21 +532,14 @@ export const ApprovalQueue = () => {
                 </TableRow>
               ) : (
                 filtered.map((row) => {
-                  const isChecked = selectedIds.includes(row.id);
                   return (
                     <TableRow
                       key={row.id}
                       onClick={() => navigate(`/expenses/${row.id}`)}
-                      className={`cursor-pointer hover:bg-muted/60 transition-colors ${isChecked ? "bg-muted/40" : ""}`}
+                      className="cursor-pointer hover:bg-muted/60 transition-colors"
                       title="Click row to view full claim details"
                     >
-                      <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => toggleSelect(row.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="pl-6">
                         <div className="flex items-center gap-2.5">
                           <Avatar className="size-8.5 rounded-full border border-border/60">
                             <AvatarImage src={row.avatar} alt={row.claimant} />

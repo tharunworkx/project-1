@@ -21,6 +21,8 @@ import {
   DollarSign,
   User,
   Building,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -36,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
+import { cn } from "cn";
 
 const mockFraudFlags = [
   {
@@ -188,6 +191,57 @@ export default function FraudDetection() {
   const [inspectItem, setInspectItem] = useState(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState('');
 
+  const tabsScrollRef = React.useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const fraudSections = [
+    { id: 'ALL', label: 'All Flags', count: mockFraudFlags.length },
+    { id: 'DUPLICATE_RECEIPT', label: 'Duplicate Receipts', count: mockFraudFlags.filter((f) => f.type === 'DUPLICATE_RECEIPT').length },
+    { id: 'DUPLICATE_EXPENSE', label: 'Duplicate Expenses', count: mockFraudFlags.filter((f) => f.type === 'DUPLICATE_EXPENSE').length },
+    { id: 'UNUSUAL_SPENDING', label: 'Unusual Spending', count: mockFraudFlags.filter((f) => f.type === 'UNUSUAL_SPENDING').length },
+    { id: 'SUSPICIOUS', label: 'Split / Suspicious', count: mockFraudFlags.filter((f) => f.type === 'SPLIT_TRANSACTION' || f.type === 'SUSPICIOUS_TRANSACTION').length },
+  ];
+
+  const checkScroll = React.useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+  }, []);
+
+  React.useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    checkScroll();
+
+    const timer = setTimeout(checkScroll, 100);
+
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => checkScroll());
+      resizeObserver.observe(el);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [checkScroll]);
+
+  const scrollTabs = (direction) => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const offset = direction === 'left' ? -200 : 200;
+    el.scrollBy({ left: offset, behavior: 'smooth' });
+  };
+
   const filteredFlags = mockFraudFlags.filter((item) => {
     const matchesSearch =
       item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -328,48 +382,68 @@ export default function FraudDetection() {
       </div>
 
       {/* Tabs Filter Bar & Search */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        {/* Horizontally scrollable pill tabs on mobile & tablet, ensuring distinct card structure */}
-        <div className="w-full md:w-auto overflow-x-auto no-scrollbar pb-1 -mb-1">
-          <div className="flex items-center gap-2 p-1.5 bg-muted/40 dark:bg-zinc-900/60 rounded-xl border border-border w-max min-w-full md:min-w-0">
-            {[
-              { id: 'ALL', label: 'All Flags', icon: Layers, count: mockFraudFlags.length },
-              { id: 'DUPLICATE_RECEIPT', label: 'Duplicate Receipts', icon: Copy, count: mockFraudFlags.filter((f) => f.type === 'DUPLICATE_RECEIPT').length },
-              { id: 'DUPLICATE_EXPENSE', label: 'Duplicate Expenses', icon: Receipt, count: mockFraudFlags.filter((f) => f.type === 'DUPLICATE_EXPENSE').length },
-              { id: 'UNUSUAL_SPENDING', label: 'Unusual Spending', icon: TrendingUp, count: mockFraudFlags.filter((f) => f.type === 'UNUSUAL_SPENDING').length },
-              { id: 'SUSPICIOUS', label: 'Split / Suspicious', icon: AlertTriangle, count: mockFraudFlags.filter((f) => f.type === 'SPLIT_TRANSACTION' || f.type === 'SUSPICIOUS_TRANSACTION').length },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* Minimalist Tab Navigation with Scroll Arrows & Indicators */}
+        <div className="relative flex-1 min-w-0 flex items-center">
+          {canScrollLeft && (
+            <button
+              type="button"
+              onClick={() => scrollTabs('left')}
+              className="shrink-0 flex items-center justify-center size-7 rounded-full bg-background border border-border/80 shadow-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer mr-1.5"
+              aria-label="Scroll tabs left"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+          )}
+
+          <div
+            ref={tabsScrollRef}
+            className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scroll-smooth flex-1 min-w-0 py-0.5"
+          >
+            {fraudSections.map((sec) => {
+              const isActive = activeTab === sec.id;
               return (
                 <button
-                  key={tab.id}
+                  key={sec.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-lg shrink-0 transition-all cursor-pointer border whitespace-nowrap ${
+                  onClick={() => setActiveTab(sec.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-full transition-colors cursor-pointer shrink-0 whitespace-nowrap select-none",
                     isActive
-                      ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
-                      : 'bg-card/90 dark:bg-zinc-800/80 text-muted-foreground hover:text-foreground hover:bg-muted border-border/80 shadow-2xs'
-                  }`}
+                      ? "bg-zinc-200 text-zinc-950 dark:bg-zinc-800 dark:text-white"
+                      : "text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white hover:bg-muted/50 bg-transparent"
+                  )}
                 >
-                  <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                  <span>{tab.label}</span>
+                  <span>{sec.label}</span>
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none ${
+                    className={cn(
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none",
                       isActive
-                        ? 'bg-primary-foreground/20 text-primary-foreground'
-                        : 'bg-muted text-muted-foreground border border-border/50'
-                    }`}
+                        ? "bg-zinc-300 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-200"
+                        : "bg-muted text-muted-foreground"
+                    )}
                   >
-                    {tab.count}
+                    {sec.count}
                   </span>
                 </button>
               );
             })}
           </div>
+
+          {canScrollRight && (
+            <button
+              type="button"
+              onClick={() => scrollTabs('right')}
+              className="shrink-0 flex items-center justify-center size-7 rounded-full bg-background border border-border/80 shadow-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer ml-1.5"
+              aria-label="Scroll tabs right"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          )}
         </div>
 
-        <div className="w-full md:w-72">
+        {/* Search Input */}
+        <div className="w-full sm:w-60 lg:w-64 shrink-0">
           <AnimatedSearchBar
             size="md"
             placeholder="Search claimant, merchant, or flag..."
@@ -378,7 +452,6 @@ export default function FraudDetection() {
             onClear={() => setSearchTerm('')}
           />
         </div>
-
       </div>
 
       {/* Main Table of Flagged Items */}

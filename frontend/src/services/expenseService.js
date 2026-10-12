@@ -56,15 +56,27 @@ export const expenseService = {
     return response.data;
   },
 
-  approveExpense: async (id, comments = '') => {
+  approveExpense: async (id, payload = {}) => {
     expenseCache = null;
-    const response = await api.post(`/expenses/${id}/approve`, { comments });
+    let data = {};
+    if (typeof payload === 'string') {
+      data = { comments: payload };
+    } else if (payload && typeof payload === 'object') {
+      data = { ...payload };
+    }
+    const response = await api.post(`/expenses/${id}/approve`, data);
     return response.data;
   },
 
-  rejectExpense: async (id, reason = '') => {
+  rejectExpense: async (id, payload = {}) => {
     expenseCache = null;
-    const response = await api.post(`/expenses/${id}/reject`, { reason });
+    let data = {};
+    if (typeof payload === 'string') {
+      data = { reason: payload };
+    } else if (payload && typeof payload === 'object') {
+      data = { ...payload };
+    }
+    const response = await api.post(`/expenses/${id}/reject`, data);
     return response.data;
   },
 
