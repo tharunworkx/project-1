@@ -1,27 +1,16 @@
 import * as React from "react";
 import {
   Search,
-  EllipsisVertical,
   ChevronLeft,
   ChevronRight,
   Download,
-  Eye,
-  CheckCheck,
-  XCircle,
-  FileText,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -30,8 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import expenseStore from "../../services/expenseStore";
 
-const transactions = [
+const defaultTransactions = [
   {
     id: "EXP-1042",
     name: "Arun Kumar",
@@ -90,7 +80,7 @@ const transactions = [
 ];
 
 function StatusBadge({ status }) {
-  if (status === "paid") {
+  if (status === "paid" || status === "approved") {
     return (
       <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 font-medium capitalize">
         Approved
@@ -112,22 +102,45 @@ function StatusBadge({ status }) {
 }
 
 export default function RecentExpenses() {
+  const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
 
-  const filtered = transactions.filter(
+  const liveTransactions = React.useMemo(() => {
+    try {
+      const stored = expenseStore.getExpenses();
+      if (Array.isArray(stored) && stored.length > 0) {
+        return stored.slice(0, 6).map((item) => ({
+          id: item.id,
+          name: typeof item.claimant === "object" ? item.claimant?.name : (item.claimant || "Employee"),
+          email: item.email || "employee@company.com",
+          avatarFallback: item.avatarFallback || "EM",
+          category: item.category || "General",
+          date: item.date || "Today",
+          amount: item.amount || "₹0.00",
+          status: item.status?.toLowerCase() === "approved" ? "paid" : (item.status?.toLowerCase() || "pending"),
+          paymentMethod: item.paymentMode || "Corporate Card",
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not read recent expenses:", e);
+    }
+    return defaultTransactions;
+  }, []);
+
+  const filtered = liveTransactions.filter(
     (t) =>
       t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.category.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <Card className="shadow-xs">
-      {/* Datatable Header matching template */}
+    <Card className="shadow-xs overflow-hidden">
+      {/* Header */}
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
         <div>
           <CardTitle className="text-lg font-semibold text-foreground">Recent Expense Claims</CardTitle>
           <CardDescription className="text-xs text-muted-foreground mt-0.5">
-            Audit and verify submitted reimbursements across all departments
+            Click any employee claim row to inspect details and audit records
           </CardDescription>
         </div>
 
@@ -149,94 +162,112 @@ export default function RecentExpenses() {
         </div>
       </CardHeader>
 
-      {/* Datatable Table */}
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-6">Employee</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Payment Mode</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead className="w-12 pr-6 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="pl-6">
-                  <div className="flex items-center gap-2.5">
-                    <Avatar className="size-8.5 rounded-full border border-border/60">
+        {/* Mobile View: Clean, Responsive Cards with no horizontal scrolling */}
+        <div className="md:hidden divide-y divide-border">
+          {filtered.length === 0 ? (
+            <div className="text-center py-8 px-4 text-xs text-muted-foreground">
+              No recent claims found.
+            </div>
+          ) : (
+            filtered.map((row) => (
+              <div
+                key={row.id}
+                onClick={() => navigate(`/expenses/${row.id}`)}
+                className="p-3.5 flex flex-col gap-2 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors"
+                title="Click to view expense details"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Avatar className="size-8.5 rounded-full border border-border/60 shrink-0">
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                         {row.avatarFallback}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs font-semibold text-foreground">{row.name}</span>
-                      <span className="text-[11px] text-muted-foreground">{row.email}</span>
+                    <div className="flex flex-col text-left leading-tight min-w-0">
+                      <span className="text-xs font-semibold text-foreground truncate">{row.name}</span>
+                      <span className="text-[11px] text-muted-foreground truncate">{row.email}</span>
                     </div>
                   </div>
-                </TableCell>
-                <TableCell className="text-xs font-medium text-foreground">
-                  {row.category}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {row.date}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {row.paymentMethod}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={row.status} />
-                </TableCell>
-                <TableCell className="text-xs font-bold text-foreground">
-                  {row.amount}
-                </TableCell>
-                <TableCell className="pr-6 text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-7 text-muted-foreground">
-                        <EllipsisVertical className="size-4" />
-                        <span className="sr-only">Actions</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link to={`/expenses/${row.id}`} className="flex items-center gap-2">
-                          <Eye className="size-4" />
-                          <span>View Details</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer text-emerald-600 focus:text-emerald-600 flex items-center gap-2">
-                        <CheckCheck className="size-4" />
-                        <span>Approve Claim</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2">
-                        <XCircle className="size-4" />
-                        <span>Reject Claim</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs font-bold text-foreground font-mono">{row.amount}</div>
+                    <StatusBadge status={row.status} />
+                  </div>
+                </div>
 
-        {/* Datatable Pagination Footer matching template */}
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+                  <span className="truncate">{row.category}</span>
+                  <span className="shrink-0">{row.date}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Clean Clickable Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-6">Employee</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Payment Mode</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="pr-6 text-right">Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((row) => (
+                <TableRow
+                  key={row.id}
+                  onClick={() => navigate(`/expenses/${row.id}`)}
+                  className="cursor-pointer hover:bg-muted/60 transition-colors group"
+                  title="Click row to view expense details"
+                >
+                  <TableCell className="pl-6">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="size-8.5 rounded-full border border-border/60">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {row.avatarFallback}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col text-left leading-tight">
+                        <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{row.name}</span>
+                        <span className="text-[11px] text-muted-foreground">{row.email}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs font-medium text-foreground">
+                    {row.category}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {row.date}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {row.paymentMethod}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={row.status} />
+                  </TableCell>
+                  <TableCell className="pr-6 text-right text-xs font-bold text-foreground font-mono">
+                    {row.amount}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Datatable Pagination Footer */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-border/80 bg-muted/20 text-xs text-muted-foreground">
-          <span>Showing 1 to {filtered.length} of {transactions.length} entries</span>
+          <span>Showing 1 to {filtered.length} of {liveTransactions.length} entries</span>
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs" disabled>
               <ChevronLeft className="size-3.5" />
             </Button>
             <Button variant="outline" size="icon" className="size-7 bg-primary text-primary-foreground font-semibold shadow-xs">
               1
-            </Button>
-            <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs">
-              2
             </Button>
             <Button variant="outline" size="icon" className="size-7 bg-card hover:bg-muted border-border/80 shadow-2xs">
               <ChevronRight className="size-3.5" />

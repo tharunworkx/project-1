@@ -4,11 +4,8 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  Building2,
-  Shield,
   Check,
 } from 'lucide-react';
-import { CustomSelect } from '@/components/ui/select';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
 import { useAuth } from '../../context/AuthContext';
 
@@ -19,25 +16,9 @@ export const Login = () => {
   // Fresh, empty state for new user input
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [department, setDepartment] = useState('Engineering & DevOps');
-  const [role, setRole] = useState('Employee');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
-
-  // Handle department change with smart role defaults
-  const handleDepartmentChange = (newDept) => {
-    setDepartment(newDept);
-    if (newDept === 'Finance & Accounts') {
-      if (role === 'Employee') setRole('Finance Executive');
-    } else if (newDept === 'Executive Management') {
-      setRole('Admin');
-    } else {
-      if (role === 'Finance Executive' || role === 'Finance Manager / CFO') {
-        setRole('Employee');
-      }
-    }
-  };
 
   // Always enforce dark theme on the login page
   useEffect(() => {
@@ -97,7 +78,7 @@ export const Login = () => {
             Welcome to ExpenseHub
           </h1>
           <p className="text-xs text-zinc-400 mt-1 font-normal">
-            Sign in with your department and assigned role
+            Sign in to manage and track your corporate expenses
           </p>
         </div>
 
@@ -197,60 +178,6 @@ export const Login = () => {
               >
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
-            </div>
-          </div>
-
-          {/* Choose Department & Role Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Department */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-200 mb-1" htmlFor="login-dept">
-                <span className="flex items-center gap-1">
-                  <Building2 className="size-3.5 text-zinc-400" />
-                  <span>Department</span>
-                </span>
-              </label>
-              <CustomSelect
-                id="login-dept"
-                name="department"
-                value={department}
-                onChange={(e) => handleDepartmentChange(e.target.value)}
-                triggerClassName="h-10 rounded-lg border border-zinc-800 bg-zinc-900/90 text-xs sm:text-sm text-zinc-100 font-medium hover:border-zinc-700"
-                contentClassName="bg-zinc-900 border-zinc-800 text-zinc-100"
-                options={[
-                  { value: "Engineering & DevOps", label: "Engineering & DevOps" },
-                  { value: "Finance & Accounts", label: "Finance & Accounts" },
-                  { value: "Growth & Marketing", label: "Growth & Marketing" },
-                  { value: "Enterprise Sales", label: "Enterprise Sales" },
-                  { value: "People & Operations", label: "People & Operations" },
-                  { value: "Executive Management", label: "Executive Management" },
-                ]}
-              />
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-200 mb-1" htmlFor="login-role">
-                <span className="flex items-center gap-1">
-                  <Shield className="size-3.5 text-zinc-400" />
-                  <span>Role</span>
-                </span>
-              </label>
-              <CustomSelect
-                id="login-role"
-                name="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                triggerClassName="h-10 rounded-lg border border-zinc-800 bg-zinc-900/90 text-xs sm:text-sm text-zinc-100 font-medium hover:border-zinc-700"
-                contentClassName="bg-zinc-900 border-zinc-800 text-zinc-100"
-                options={[
-                  { value: "Employee", label: "Employee" },
-                  { value: "Manager", label: "Manager" },
-                  { value: "Finance Executive", label: "Finance Executive" },
-                  { value: "Finance Manager / CFO", label: "Finance Manager / CFO" },
-                  { value: "Admin", label: "Admin" },
-                ]}
-              />
             </div>
           </div>
 

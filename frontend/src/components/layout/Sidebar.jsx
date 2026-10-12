@@ -20,6 +20,7 @@ import {
   Bell,
   Landmark,
   FileText,
+  X,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,6 +45,7 @@ import {
 import { cn } from "cn";
 
 import { useAuth } from "../../context/AuthContext";
+import { supabase } from "../../services/supabaseStorage";
 
 const checkSubActive = (subHref, currentPath) => {
   if (currentPath === subHref) return true;
@@ -56,7 +58,7 @@ const checkSubActive = (subHref, currentPath) => {
 };
 
 function CollapsibleNavItem({ item, location }) {
-  const { state } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isAnyChildActive = item.childItems?.some(
     (sub) => checkSubActive(sub.href, location.pathname)
@@ -105,6 +107,11 @@ function CollapsibleNavItem({ item, location }) {
                   <DropdownMenuItem key={subItem.label} asChild className="cursor-pointer rounded-lg p-0">
                     <NavLink
                       to={subItem.href}
+                      onClick={() => {
+                        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                          setOpen(false);
+                        }
+                      }}
                       className={cn(
                         "flex items-center w-full px-2.5 py-1.5 text-xs rounded-lg transition-colors font-medium",
                         isSubActive
@@ -152,6 +159,11 @@ function CollapsibleNavItem({ item, location }) {
                 <NavLink
                   key={subItem.label}
                   to={subItem.href}
+                  onClick={() => {
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                      setOpen(false);
+                    }
+                  }}
                   className={cn(
                     "block py-1 text-xs transition-colors truncate rounded-md px-2",
                     isSubActive
@@ -159,7 +171,12 @@ function CollapsibleNavItem({ item, location }) {
                       : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80 font-normal dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/40"
                   )}
                 >
-                  {subItem.label}
+                  <span className="truncate">{subItem.label}</span>
+                  {subItem.badge && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white shrink-0 ml-1">
+                      {subItem.badge}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}
@@ -307,8 +324,19 @@ const NAV_GROUPS = [
 
 export function AppSidebar({ ...props }) {
   const location = useLocation();
-  const { open, toggleSidebar } = useSidebar();
+  const { open, toggleSidebar, setOpen } = useSidebar();
   const { user } = useAuth();
+
+  // Collapse menu bar to icon view after selecting a new section in mobile or tab view (< 1024px)
+  const prevPathRef = React.useRef(location.pathname);
+  React.useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        setOpen(false);
+      }
+    }
+  }, [location.pathname, setOpen]);
 
   const roleName = user?.role || "Employee";
   const roleLower = roleName.toLowerCase();
@@ -342,11 +370,9 @@ export function AppSidebar({ ...props }) {
               return { ...item, childItems: filteredChildren };
             }
 
-            if (item.href === "/finance") return isFinanceTeam ? item : null;
             if (item.href === "/approvals") return (isManager || isFinanceTeam) ? item : null;
             if (item.href === "/fraud-detection") return (isCFO || isAdmin) ? item : null;
             if (item.href === "/budgets") return (isManager || isFinanceTeam) ? item : null;
-            if (item.href === "/reports") return (isManager || isFinanceTeam) ? item : null;
             if (item.href === "/audit") return isFinanceTeam ? item : null;
             if (item.href === "/integrations") return isAdmin ? item : null;
             if (item.href === "/monitoring") return (isCFO || isAdmin) ? item : null;
@@ -365,9 +391,9 @@ export function AppSidebar({ ...props }) {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
-      {/* 1. Header: Toggle button matching Image 1 (black in light) & Image 2 (white in dark) */}
+      {/* 1. Header: Toggle button matching laptop view with no box background */}
       <SidebarHeader className="p-3 pb-1 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:py-2.5 group-data-[collapsible=icon]:h-14 border-none flex flex-row items-center justify-start group-data-[collapsible=icon]:justify-center overflow-hidden">
-        <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full shrink-0">
+        <div className="flex items-center justify-start group-data-[collapsible=icon]:justify-center w-full shrink-0">
           <button
             type="button"
             onClick={toggleSidebar}

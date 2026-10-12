@@ -145,7 +145,7 @@ export const Reports = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Financial Reports & Reconciliation
+            Financial Report and Analytics
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Audit-grade reporting engine for statutory filings, departmental spend allocations, and treasury exports.
@@ -387,11 +387,11 @@ export const Reports = () => {
                   </div>
 
                   {/* Export Options: CSV, Excel, PDF */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
+                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer"
                       onClick={() => handleExport('csv')}
                     >
                       <Download className="size-3" />
@@ -401,7 +401,7 @@ export const Reports = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs"
+                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer"
                       onClick={() => handleExport('excel')}
                     >
                       <FileSpreadsheet className="size-3" />
@@ -410,7 +410,7 @@ export const Reports = () => {
 
                     <Button
                       size="sm"
-                      className="h-8 gap-1.5 text-xs rounded-full shadow-2xs bg-primary text-primary-foreground"
+                      className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full shadow-2xs bg-primary text-primary-foreground cursor-pointer"
                       onClick={() => handleExport('pdf')}
                     >
                       <Printer className="size-3" />

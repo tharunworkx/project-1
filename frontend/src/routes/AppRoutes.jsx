@@ -132,49 +132,14 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Reports (Manager, Finance, Admin) */}
-          <Route
-            path="/reports"
-            element={
-              <RoleRoute allowedRoles={["manager", "finance_team"]}>
-                <Reports />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/finance/reports"
-            element={
-              <RoleRoute allowedRoles={["manager", "finance_team"]}>
-                <Reports />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <RoleRoute allowedRoles={["manager", "finance_team"]}>
-                <Reports />
-              </RoleRoute>
-            }
-          />
+          {/* Financial Report and Analytics (Accessible to all authenticated users) */}
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/finance/reports" element={<Reports />} />
+          <Route path="/analytics" element={<Reports />} />
 
-          {/* Finance Hub & Financial Analytics (Finance Executive, CFO, Admin) */}
-          <Route
-            path="/finance"
-            element={
-              <RoleRoute allowedRoles={["finance_team"]}>
-                <FinanceDashboard />
-              </RoleRoute>
-            }
-          />
-          <Route
-            path="/finance/analytics"
-            element={
-              <RoleRoute allowedRoles={["finance_team"]}>
-                <FinanceDashboard />
-              </RoleRoute>
-            }
-          />
+          {/* Finance Analytics redirects to unified Financial Report and Analytics */}
+          <Route path="/finance" element={<Navigate to="/reports" replace />} />
+          <Route path="/finance/analytics" element={<Navigate to="/reports" replace />} />
 
           {/* Notification Center */}
           <Route path="/notifications" element={<Notifications />} />

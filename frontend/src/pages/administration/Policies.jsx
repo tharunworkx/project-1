@@ -200,8 +200,8 @@ export const Policies = () => {
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="w-full min-w-[650px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="pl-6">POLICY RULE</TableHead>

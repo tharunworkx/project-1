@@ -101,17 +101,9 @@ export const AuthProvider = ({ children }) => {
           return userObj;
         }
       } catch (backendErr) {
-        const errMsg = typeof backendErr === 'string' ? backendErr : backendErr?.message || '';
-        // If backend explicitly rejected invalid credentials, fail immediately
-        if (
-          errMsg.toLowerCase().includes('bad credentials') ||
-          errMsg.toLowerCase().includes('invalid') ||
-          errMsg.toLowerCase().includes('not found') ||
-          errMsg.toLowerCase().includes('unauthorized')
-        ) {
-          throw 'Invalid email or password. Please verify your credentials.';
-        }
-        // If backend is unreachable (e.g. on hosted Vercel site), fall through to Supabase query
+        // Backend might be offline or user registered directly via Supabase.
+        // Fall through to authoritative Supabase verification.
+        console.warn('Backend login unavailable or unmapped, checking Supabase:', backendErr);
       }
 
       // 2. Query Supabase directly (ensures deleted users CANNOT log in)
@@ -321,8 +313,105 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  const updateUser = (data) => {
-    setUser((prev) => ({ ...prev, ...data }));
+  const updateUser = async (data) => {
+    const updatedUser = { ...user, ...data };
+    if (data.name) {
+      updatedUser.name = data.name;
+      updatedUser.avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`;
+    }
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+    // Persist changes directly into Supabase so re-logging in keeps the updated name
+    const currentEmail = (user?.email || '').toLowerCase().trim();
+    const targetEmail = (data.email || currentEmail).toLowerCase().trim();
+    const rawId = data.id || user?.id;
+    let numericId = null;
+    if (typeof rawId === 'number') {
+      numericId = rawId;
+    } else if (typeof rawId === 'string') {
+      const clean = rawId.replace(/\D/g, '');
+      if (clean) numericId = parseInt(clean, 10);
+    }
+
+    const payload = {
+      updated_at: new Date().toISOString(),
+    };
+    if (data.name) {
+      const parts = data.name.trim().split(' ');
+      payload.first_name = parts[0] || '';
+      payload.last_name = parts.slice(1).join(' ') || '';
+    }
+    if (data.department) {
+      payload.department = data.department;
+    }
+    if (data.role) {
+      payload.role = data.role;
+    }
+    if (data.email && data.email !== currentEmail) {
+      payload.email = targetEmail;
+    }
+
+    let updateSuccess = false;
+    let updateErrorMsg = null;
+
+    // 1. Primary update in Supabase by email
+    const emailToQuery = currentEmail || targetEmail;
+    if (emailToQuery) {
+      try {
+        const { data: updatedRows, error: emailErr } = await supabase
+          .from('users')
+          .update(payload)
+          .eq('email', emailToQuery)
+          .select();
+
+        if (!emailErr && updatedRows && updatedRows.length > 0) {
+          updateSuccess = true;
+        } else if (emailErr) {
+          updateErrorMsg = emailErr.message;
+          console.warn('Supabase update by email error:', emailErr);
+        }
+      } catch (e) {
+        console.warn('Supabase email update exception:', e);
+      }
+    }
+
+    // 2. Fallback update by numeric ID if email didn't match
+    if (!updateSuccess && numericId) {
+      try {
+        const { data: updatedRows, error: idErr } = await supabase
+          .from('users')
+          .update(payload)
+          .eq('id', numericId)
+          .select();
+
+        if (!idErr && updatedRows && updatedRows.length > 0) {
+          updateSuccess = true;
+        } else if (idErr) {
+          updateErrorMsg = idErr.message;
+          console.warn('Supabase update by ID error:', idErr);
+        }
+      } catch (e) {
+        console.warn('Supabase ID update exception:', e);
+      }
+    }
+
+    // 3. Also update backend API if reachable
+    try {
+      if (numericId) {
+        await userService.updateUser(numericId, {
+          name: data.name,
+          department: data.department,
+          role: data.role,
+        });
+      }
+    } catch (backendErr) {
+      console.warn('Backend update notice:', backendErr);
+    }
+
+    if (!updateSuccess && updateErrorMsg) {
+      throw updateErrorMsg;
+    }
   };
 
   return (

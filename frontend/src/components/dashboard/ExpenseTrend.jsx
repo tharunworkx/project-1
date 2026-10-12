@@ -14,6 +14,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
 import {
   TrendingUp,
@@ -237,11 +238,17 @@ const PERIOD_CONFIGS = {
 
 export default function ExpenseTrend() {
   const [period, setPeriod] = React.useState("6M");
+  const [activeBarIndex, setActiveBarIndex] = React.useState(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  // In dark mode: white. In light mode: light black (soft charcoal #4b5563)
-  const expenseBarFill = isDark ? "#ffffff" : "#4b5563";
+  const config = periodConfigs[period] || periodConfigs["6M"];
+  const currentChartData = config.chart;
+  const currentMetrics = config.metrics;
+
+  // In dark mode: white/zinc-200. In light mode: sleek charcoal (#475569)
+  const expenseBarFill = isDark ? "#ffffff" : "#475569";
+  const approvedBarFill = "oklch(0.6 0.118 184.704)";
 
   const currentConfig = PERIOD_CONFIGS[period] || PERIOD_CONFIGS["6M"];
 
@@ -249,7 +256,17 @@ export default function ExpenseTrend() {
     <Card className="shadow-xs">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3">
         <div>
-          <CardTitle className="text-lg font-semibold text-foreground">Expense Metrics</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Expense Metrics
+            </CardTitle>
+            {config.peakLabel && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <Sparkles className="size-3" />
+                Peak: {config.peakLabel}
+              </span>
+            )}
+          </div>
           <CardDescription className="text-xs text-muted-foreground mt-0.5">
             {currentConfig.description}
           </CardDescription>
@@ -279,7 +296,8 @@ export default function ExpenseTrend() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="h-[250px] w-full pt-1">
+        {/* Responsive Bar Chart with Enhanced Position Highlighting */}
+        <div className="h-[260px] w-full pt-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               key={period}
@@ -289,13 +307,13 @@ export default function ExpenseTrend() {
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
-                className="stroke-border/60"
+                className="stroke-border/50"
               />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11, fontWeight: 500 }}
               />
               <YAxis
                 axisLine={false}
@@ -323,13 +341,31 @@ export default function ExpenseTrend() {
                 name="Total Expenses"
                 fill={expenseBarFill}
                 radius={[4, 4, 0, 0]}
-              />
+                maxBarSize={32}
+              >
+                {currentChartData.map((entry, index) => (
+                  <Cell
+                    key={`exp-${index}`}
+                    fill={expenseBarFill}
+                    opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.65}
+                  />
+                ))}
+              </Bar>
               <Bar
                 dataKey="approved"
                 name="Approved Claims"
-                fill="oklch(0.6 0.118 184.704)"
+                fill={approvedBarFill}
                 radius={[4, 4, 0, 0]}
-              />
+                maxBarSize={32}
+              >
+                {currentChartData.map((entry, index) => (
+                  <Cell
+                    key={`app-${index}`}
+                    fill={approvedBarFill}
+                    opacity={activeBarIndex === null || activeBarIndex === index ? 1 : 0.65}
+                  />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -339,16 +375,23 @@ export default function ExpenseTrend() {
           {currentConfig.metrics.map((m) => {
             const Icon = m.icon;
             return (
-              <div key={m.title} className="flex flex-col gap-1 p-2.5 rounded-lg bg-muted/40 border border-border/40">
+              <div
+                key={m.title}
+                className="flex flex-col gap-1 p-3 rounded-xl bg-muted/30 border border-border/60 hover:bg-muted/50 transition-colors"
+              >
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                   <Icon className="size-3.5 text-primary" />
                   <span className="truncate">{m.title}</span>
                 </div>
-                <div className="text-base font-bold text-foreground">
+                <div className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                   {m.value}
                 </div>
-                <span className={`text-[11px] font-medium ${m.positive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-                  {m.change}
+                <span
+                  className={`text-[11px] font-semibold ${
+                    m.positive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                  }`}
+                >
+                  {m.change} vs prev. period
                 </span>
               </div>
             );

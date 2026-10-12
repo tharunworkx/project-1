@@ -106,7 +106,7 @@ function StatusBadge({ status }) {
       </Badge>
     );
   }
-  if (s === 'pending reimbursement') {
+  if (s === 'pending' || s === 'pending reimbursement') {
     return (
       <Badge className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-500/10 dark:text-amber-300 font-medium">
         Pending Reimbursement
@@ -642,7 +642,7 @@ export const Reimbursements = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {canTakeActions && selectedIds.length > 0 && (
             <div className="flex items-center gap-2">
               <Button
@@ -899,7 +899,67 @@ export const Reimbursements = () => {
         </CardHeader>
 
         <CardContent className="p-0 overflow-hidden">
-          <div className="w-full overflow-x-auto">
+          {/* Mobile Card List: Touch-friendly & Responsive with zero horizontal scroll */}
+          <div className="md:hidden divide-y divide-border">
+            {loading ? (
+              <div className="text-center py-10 px-4 text-xs text-muted-foreground">
+                Loading reimbursement claims...
+              </div>
+            ) : paginatedList.length === 0 ? (
+              <div className="text-center py-10 px-4 text-xs text-muted-foreground">
+                No reimbursement claims found matching your filter criteria.
+              </div>
+            ) : (
+              paginatedList.map((row) => {
+                const isChecked = selectedIds.includes(row.id);
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => handleViewDetails(row)}
+                    className={`p-4 flex flex-col gap-2.5 cursor-pointer hover:bg-muted/40 active:bg-muted/60 transition-colors ${isChecked ? 'bg-muted/30' : ''}`}
+                    title="Tap to view reimbursement details and timeline"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {canTakeActions && (
+                          <div onClick={(e) => e.stopPropagation()} className="shrink-0 mr-1">
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={() => toggleSelect(row.id)}
+                            />
+                          </div>
+                        )}
+                        <Avatar className="size-8.5 rounded-full border border-border/60 shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                            {row.avatarFallback || 'EM'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col text-left leading-tight min-w-0">
+                          <span className="text-xs font-semibold text-foreground truncate">{row.employeeName}</span>
+                          <span className="text-[11px] text-muted-foreground font-mono truncate">{row.expenseId}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-bold text-foreground font-mono">
+                          {formatCurrency(row.amount, row.currency)}
+                        </div>
+                        <StatusBadge status={row.status} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border/40">
+                      <span className="truncate">{row.department} • {row.category}</span>
+                      <span className="shrink-0">{formatDate(row.approvedDate)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <Table className="w-full min-w-[850px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -965,9 +1025,14 @@ export const Reimbursements = () => {
                   paginatedList.map((row) => {
                     const isChecked = selectedIds.includes(row.id);
                     return (
-                      <TableRow key={row.id} className={isChecked ? 'bg-muted/40' : ''}>
+                      <TableRow
+                        key={row.id}
+                        onClick={() => handleViewDetails(row)}
+                        className={`cursor-pointer hover:bg-muted/60 transition-colors group ${isChecked ? 'bg-muted/40' : ''}`}
+                        title="Click row to view full claim details & timeline"
+                      >
                         {canTakeActions && (
-                          <TableCell className="pl-6">
+                          <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={isChecked}
                               onCheckedChange={() => toggleSelect(row.id)}
@@ -977,7 +1042,7 @@ export const Reimbursements = () => {
 
                         <TableCell>
                           <div className="flex flex-col text-left">
-                            <span className="font-mono text-xs font-semibold text-foreground">
+                            <span className="font-mono text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
                               {row.expenseId}
                             </span>
                             <span className="text-[10px] text-muted-foreground font-mono">
@@ -1038,7 +1103,7 @@ export const Reimbursements = () => {
                           </div>
                         </TableCell>
 
-                        <TableCell className="pr-6 text-right">
+                        <TableCell className="pr-6 text-right" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1051,14 +1116,6 @@ export const Reimbursements = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 text-xs">
-                              <DropdownMenuItem
-                                onClick={() => handleViewDetails(row)}
-                                className="cursor-pointer flex items-center gap-2"
-                              >
-                                <Eye className="size-3.5 text-primary" />
-                                <span>View Details & Timeline</span>
-                              </DropdownMenuItem>
-
                               <DropdownMenuItem
                                 onClick={() => {
                                   alert(`Attached Receipt: ${row.receipt?.fileName || 'tax_invoice.pdf'}\nSize: ${row.receipt?.fileSize || '380 KB'}\nStatus: Verified`);

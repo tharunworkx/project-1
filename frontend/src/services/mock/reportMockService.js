@@ -1,4 +1,5 @@
 import { initialReimbursementsData, initialBudgetsData, mockEmployees } from './financeMockData';
+import expenseStore from '../expenseStore';
 
 export const REPORT_TYPES = [
   'Expense Report',
@@ -85,19 +86,41 @@ export const reportMockService = {
         riskScore: 'Medium',
       };
     } else if (type === 'Reimbursement Report') {
-      records = initialReimbursementsData.map((r) => ({
-        id: r.id,
-        claimId: r.expenseId,
-        primaryText: r.employeeName,
-        secondaryText: r.employeeId,
-        category: r.category,
-        date: r.approvedDate,
-        department: r.department,
-        amount: r.amount,
-        status: r.status,
-        paymentMethod: r.paymentMethod,
-        referenceId: r.paymentReferenceId,
-      }));
+      const storeExpenses = expenseStore.getExpenses();
+      const liveReimbRecords = storeExpenses
+        .filter((e) => (e.status || '').toLowerCase() !== 'draft')
+        .map((e) => ({
+          id: `RMB-${e.id}`,
+          claimId: e.id,
+          primaryText: e.claimant || (e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee')),
+          secondaryText: e.department || 'Operations',
+          category: e.category || 'General',
+          date: e.date || new Date().toISOString().substring(0, 10),
+          department: e.department || 'Operations',
+          amount: Number(e.numericAmount || String(e.amount || '0').replace(/[^0-9.]/g, '') || 0),
+          status: e.status === 'Approved' ? 'Ready for Payout' : (e.status === 'Reimbursed' ? 'Reimbursed' : 'Pending Review'),
+          paymentMethod: e.paymentMode || 'Direct Deposit',
+          referenceId: `REF-${e.id}`,
+        }));
+
+      const existingClaimIds = new Set(liveReimbRecords.map((r) => r.claimId));
+      const fallbackRecords = initialReimbursementsData
+        .filter((r) => !existingClaimIds.has(r.expenseId) && !existingClaimIds.has(r.id))
+        .map((r) => ({
+          id: r.id,
+          claimId: r.expenseId,
+          primaryText: r.employeeName,
+          secondaryText: r.employeeId,
+          category: r.category,
+          date: r.approvedDate,
+          department: r.department,
+          amount: r.amount,
+          status: r.status,
+          paymentMethod: r.paymentMethod,
+          referenceId: r.paymentReferenceId,
+        }));
+
+      records = [...liveReimbRecords, ...fallbackRecords];
 
       const totalAmount = records.reduce((acc, r) => acc + r.amount, 0);
       const settled = records.filter((r) => r.status === 'Reimbursed');
@@ -111,28 +134,47 @@ export const reportMockService = {
       };
     } else {
       // Default: Expense Report or Category/Department/Monthly Financial Report
-      records = initialReimbursementsData.map((r) => ({
-        id: r.expenseId,
-        claimId: r.id,
-        primaryText: r.employeeName,
-        secondaryText: r.description,
-        category: r.category,
-        date: r.approvedDate,
-        department: r.department,
-        amount: r.amount,
-        status: r.status,
-        merchant: r.merchant,
+      const storeExpenses = expenseStore.getExpenses();
+      const liveRecords = storeExpenses.map((e) => ({
+        id: e.id,
+        claimId: e.id,
+        primaryText: e.claimant || (e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee')),
+        secondaryText: e.title || e.justification || e.merchant || 'Expense Claim',
+        category: e.category || 'General',
+        date: e.date || new Date().toISOString().substring(0, 10),
+        department: e.department || 'Operations',
+        amount: Number(e.numericAmount || String(e.amount || '0').replace(/[^0-9.]/g, '') || 0),
+        status: e.status || 'Pending',
+        merchant: e.merchant || 'Corporate Vendor',
       }));
+
+      const existingExpenseIds = new Set(liveRecords.map((r) => r.id));
+      const fallbackRecords = initialReimbursementsData
+        .filter((r) => !existingExpenseIds.has(r.expenseId) && !existingExpenseIds.has(r.id))
+        .map((r) => ({
+          id: r.expenseId,
+          claimId: r.id,
+          primaryText: r.employeeName,
+          secondaryText: r.description,
+          category: r.category,
+          date: r.approvedDate,
+          department: r.department,
+          amount: r.amount,
+          status: r.status,
+          merchant: r.merchant,
+        }));
+
+      records = [...liveRecords, ...fallbackRecords];
 
       // Apply department/employee filters if specified
       if (criteria.department && criteria.department !== 'All') {
-        records = records.filter((r) => r.department === criteria.department);
+        records = records.filter((r) => r.department?.toLowerCase() === criteria.department?.toLowerCase());
       }
       if (criteria.employee && criteria.employee !== 'All') {
-        records = records.filter((r) => r.primaryText === criteria.employee);
+        records = records.filter((r) => r.primaryText?.toLowerCase() === criteria.employee?.toLowerCase());
       }
       if (criteria.category && criteria.category !== 'All') {
-        records = records.filter((r) => r.category === criteria.category);
+        records = records.filter((r) => r.category?.toLowerCase() === criteria.category?.toLowerCase());
       }
 
       const totalAmount = records.reduce((acc, r) => acc + r.amount, 0);

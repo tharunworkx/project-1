@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ExternalLink,
   Trash2,
+  PanelLeftOpen,
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AnimatedSearchBar } from "../ui/AnimatedSearchBar";
@@ -45,6 +46,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ModeToggle from "./ModeToggle";
 import { useAuth } from "../../context/AuthContext";
+import { useSidebar } from "@/components/ui/sidebar";
 import NotificationBellDropdown from "../notifications/NotificationBellDropdown";
 
 const routeNames = {
@@ -121,6 +123,7 @@ export default function Topbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { open, toggleSidebar } = useSidebar();
   const currentTitle = routeNames[location.pathname] || "Dashboard";
 
   // Search State
@@ -193,27 +196,21 @@ export default function Topbar() {
 
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-border/80 bg-card flex items-center shadow-xs">
-      <div className="flex size-full items-center justify-between px-4 sm:px-6">
-        {/* Left side: Breadcrumb (and mobile trigger) */}
-        <div className="flex items-center gap-3">
-          <SidebarTrigger className="md:hidden size-9 flex items-center justify-center rounded-lg bg-black text-white hover:bg-zinc-800 border border-black dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 dark:border-white shadow-xs [&_svg]:size-4.5" />
-          <Breadcrumb className="flex items-center">
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/dashboard" className="text-sm font-normal text-muted-foreground hover:text-foreground">
-                    Expense Management System
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-sm font-medium text-foreground">
-                  {currentTitle}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      <div className="flex size-full items-center justify-between pl-2 pr-3.5 sm:px-6">
+        {/* Left side: Clean Section Title with Mobile Menu Toggle placed towards left corner */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title={open ? "Close menu" : "Open menu"}
+            className="md:hidden size-9 -ml-0.5 rounded-xl flex items-center justify-center text-zinc-700 hover:text-foreground hover:bg-zinc-200/50 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/50 transition-colors cursor-pointer shrink-0"
+            aria-label="Toggle Navigation Menu"
+          >
+            <PanelLeftOpen className="size-5 stroke-[2]" />
+          </button>
+          <h1 className="text-sm sm:text-base font-semibold text-foreground tracking-tight truncate">
+            {currentTitle}
+          </h1>
         </div>
 
         {/* Right side: Search, Theme Toggle, Notification, Profile Dropdown */}
