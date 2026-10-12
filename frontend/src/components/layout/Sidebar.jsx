@@ -20,6 +20,10 @@ import {
   Bell,
   Landmark,
   FileText,
+  Check,
+  Users,
+  Briefcase,
+  Tags,
 } from "lucide-react";
 import {
   Sidebar,
@@ -55,13 +59,23 @@ const checkSubActive = (subHref, currentPath) => {
   return currentPath.startsWith(subHref + "/");
 };
 
+const getSubIcon = (label) => {
+  const l = label.toLowerCase();
+  if (l.includes("user") || l.includes("team")) return Users;
+  if (l.includes("department")) return Building2;
+  if (l.includes("project")) return Briefcase;
+  if (l.includes("category") || l.includes("categories")) return Tags;
+  if (l.includes("policy") || l.includes("policies")) return ShieldCheck;
+  return FileText;
+};
+
 function CollapsibleNavItem({ item, location }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isAnyChildActive = item.childItems?.some(
     (sub) => checkSubActive(sub.href, location.pathname)
   );
-  const [isOpen, setIsOpen] = React.useState(true);
+  const [isOpen, setIsOpen] = React.useState(isAnyChildActive);
   const Icon = item.icon;
 
   React.useEffect(() => {
@@ -70,7 +84,7 @@ function CollapsibleNavItem({ item, location }) {
     }
   }, [isAnyChildActive]);
 
-  // If sidebar is minimized into icon rail, show an instant flyout dropdown menu on click/hover
+  // If sidebar is collapsed into mini icon rail, use popover floating menu
   if (isCollapsed) {
     return (
       <SidebarMenuItem className="w-full flex justify-center">
@@ -82,8 +96,8 @@ function CollapsibleNavItem({ item, location }) {
               className={cn(
                 "size-9! p-0! justify-center! mx-auto! rounded-xl cursor-pointer transition-colors",
                 isAnyChildActive
-                  ? "bg-zinc-200! text-zinc-950! shadow-xs border border-zinc-300/70 hover:bg-zinc-200! hover:text-zinc-950! dark:bg-zinc-800! dark:text-white! dark:border dark:border-zinc-700/60 font-semibold"
-                  : "bg-transparent text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/60"
+                  ? "bg-zinc-200! text-zinc-950! shadow-xs border border-zinc-300/70 dark:bg-zinc-800! dark:text-white! dark:border dark:border-zinc-700/60 font-semibold"
+                  : "bg-transparent text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/60"
               )}
             >
               <Icon className={cn("size-4.5 shrink-0", isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-600 dark:text-zinc-400")} />
@@ -93,26 +107,26 @@ function CollapsibleNavItem({ item, location }) {
             side="right"
             align="start"
             sideOffset={12}
-            className="w-52 p-1.5 shadow-xl rounded-xl border border-zinc-200 bg-white text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 animate-in fade-in zoom-in-95 duration-150 z-50"
+            className="w-52 p-1.5 rounded-2xl bg-white dark:bg-[#18181b] text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 shadow-xl dark:shadow-2xl dark:shadow-black/80 animate-in fade-in zoom-in-95 duration-150 z-50 select-none"
           >
-            <div className="px-2.5 py-1.5 text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              {item.label}
-            </div>
             <div className="space-y-0.5">
               {item.childItems.map((subItem) => {
                 const isSubActive = checkSubActive(subItem.href, location.pathname);
+                const SubIcon = getSubIcon(subItem.label);
                 return (
-                  <DropdownMenuItem key={subItem.label} asChild className="cursor-pointer rounded-lg p-0">
+                  <DropdownMenuItem key={subItem.label} asChild className="p-0 rounded-xl focus:bg-transparent">
                     <NavLink
                       to={subItem.href}
                       className={cn(
-                        "flex items-center w-full px-2.5 py-1.5 text-xs rounded-lg transition-colors font-medium",
+                        "flex items-center gap-2.5 w-full px-2.5 py-2 text-xs rounded-xl transition-colors font-medium cursor-pointer",
                         isSubActive
-                          ? "bg-zinc-200 text-zinc-950 font-bold border border-zinc-300/60 dark:bg-zinc-800 dark:text-white"
-                          : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-white"
+                          ? "bg-zinc-100 text-zinc-950 font-semibold dark:bg-zinc-800/90 dark:text-white"
+                          : "text-zinc-700 hover:bg-zinc-100/80 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-white"
                       )}
                     >
-                      {subItem.label}
+                      <SubIcon className={cn("size-4 shrink-0", isSubActive ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400")} />
+                      <span className="flex-1 truncate">{subItem.label}</span>
+                      {isSubActive && <Check className="size-4 text-sky-500 dark:text-sky-400 shrink-0 ml-1.5" />}
                     </NavLink>
                   </DropdownMenuItem>
                 );
@@ -124,69 +138,56 @@ function CollapsibleNavItem({ item, location }) {
     );
   }
 
-  // When sidebar is extended: inline accordion matching reference Image 2
+  // When sidebar is extended: dropdown unfolds directly inside the sidebar layout itself!
   return (
     <SidebarMenuItem className="w-full">
-      {isOpen ? (
-        <div className="flex items-start gap-2.5 w-full px-2 py-1">
-          {/* Logo button on the left */}
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            title={`Toggle ${item.label}`}
-            className={cn(
-              "size-9 rounded-xl p-0 flex items-center justify-center shrink-0 transition-colors cursor-pointer",
-              isAnyChildActive
-                ? "bg-zinc-200 text-zinc-950 shadow-xs border border-zinc-300/70 dark:bg-zinc-800 dark:text-white dark:border dark:border-zinc-700/60"
-                : "bg-transparent text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80 dark:bg-transparent dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/60"
-            )}
-          >
-            <Icon className={cn("size-4.5", isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-300")} />
-          </button>
-
-          {/* Subitems list with vertical divider line */}
-          <div className="border-l border-zinc-200 dark:border-zinc-800 pl-3 flex flex-col gap-1.5 flex-1 min-w-0">
-            {item.childItems.map((subItem) => {
-              const isSubActive = checkSubActive(subItem.href, location.pathname);
-              return (
-                <NavLink
-                  key={subItem.label}
-                  to={subItem.href}
-                  className={cn(
-                    "block py-1 text-xs transition-colors truncate rounded-md px-2",
-                    isSubActive
-                      ? "bg-zinc-200 text-zinc-950 font-semibold shadow-2xs border border-zinc-300/50 dark:bg-zinc-800 dark:text-white"
-                      : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80 font-normal dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-800/40"
-                  )}
-                >
-                  {subItem.label}
-                </NavLink>
-              );
-            })}
-          </div>
+      <SidebarMenuButton
+        tooltip={item.label}
+        isActive={isAnyChildActive}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={cn(
+          "h-10 rounded-xl px-3 transition-colors cursor-pointer w-full justify-between select-none",
+          isAnyChildActive
+            ? "bg-zinc-200! text-zinc-950! font-semibold shadow-xs border border-zinc-300/70 dark:bg-zinc-800! dark:text-white! dark:border dark:border-zinc-700/60"
+            : "text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/60"
+        )}
+      >
+        <div className="flex items-center gap-2.5 truncate">
+          <Icon className={cn("size-4.5 shrink-0", isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-300")} />
+          <span className="truncate font-medium">{item.label}</span>
         </div>
-      ) : (
-        /* Closed state: Full pill button matching reference Image 1 */
-        <SidebarMenuButton
-          tooltip={item.label}
-          isActive={isAnyChildActive}
-          onClick={() => setIsOpen(true)}
+        <ChevronRight
           className={cn(
-            "w-full justify-between font-medium cursor-pointer h-10 rounded-xl px-3 transition-colors",
-            isAnyChildActive
-              ? "bg-zinc-200! text-zinc-950! font-semibold shadow-xs border border-zinc-300/70 dark:bg-zinc-800! dark:text-white!"
-              : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/80 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/60"
+            "size-4 shrink-0 transition-transform duration-200",
+            isOpen ? "rotate-90 text-zinc-950 dark:text-white" : "text-zinc-400 dark:text-zinc-500"
           )}
-        >
-          <div className="flex items-center gap-2">
-            <Icon className={cn("size-4.5 shrink-0", isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-300")} />
-            <span className={isAnyChildActive ? "text-zinc-950 dark:text-white font-semibold" : ""}>{item.label}</span>
-          </div>
-          <ChevronRight className={cn(
-            "ml-auto size-4",
-            isAnyChildActive ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400"
-          )} />
-        </SidebarMenuButton>
+        />
+      </SidebarMenuButton>
+
+      {/* Dropdown in sidebar layout itself, with neutral monochrome icons */}
+      {isOpen && (
+        <div className="mt-1 mb-1 pl-3.5 pr-1 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1 duration-150">
+          {item.childItems.map((subItem) => {
+            const isSubActive = checkSubActive(subItem.href, location.pathname);
+            const SubIcon = getSubIcon(subItem.label);
+            return (
+              <NavLink
+                key={subItem.label}
+                to={subItem.href}
+                className={cn(
+                  "flex items-center gap-2.5 w-full px-3 py-2 text-xs sm:text-sm rounded-xl transition-colors font-medium cursor-pointer",
+                  isSubActive
+                    ? "bg-zinc-200 text-zinc-950 font-semibold shadow-2xs dark:bg-zinc-800 dark:text-white"
+                    : "text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-white"
+                )}
+              >
+                <SubIcon className={cn("size-4 shrink-0", isSubActive ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400")} />
+                <span className="flex-1 truncate">{subItem.label}</span>
+                {isSubActive && <Check className="size-3.5 text-sky-500 dark:text-sky-400 shrink-0 ml-1.5" />}
+              </NavLink>
+            );
+          })}
+        </div>
       )}
     </SidebarMenuItem>
   );

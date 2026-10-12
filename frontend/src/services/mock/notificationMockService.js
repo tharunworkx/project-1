@@ -4,6 +4,95 @@ import { supabase } from '../supabaseStorage';
 const NOTIFS_STORAGE_KEY = 'ems_person3_notifications';
 const PREFS_STORAGE_KEY = 'ems_person3_notification_preferences';
 
+export const NOTIFICATION_EVENT = 'ems_notification_update';
+export const EXPENSES_EVENT = 'ems_expenses_updated';
+
+/**
+ * Real-time event dispatcher supporting both local window events and cross-tab BroadcastChannel
+ */
+export const dispatchRealtimeEvent = (eventName, detail = {}) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(eventName, { detail }));
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('ems_realtime_sync');
+        bc.postMessage({ eventName, detail, timestamp: Date.now() });
+        bc.close();
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+};
+
+/**
+ * Subscribe to real-time notifications with automatic cleanup
+ */
+export const subscribeToNotifications = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleEvent = (e) => {
+    callback(e?.detail);
+  };
+
+  const handleStorage = (e) => {
+    if (e.key === NOTIFS_STORAGE_KEY) {
+      callback();
+    }
+  };
+
+  window.addEventListener(NOTIFICATION_EVENT, handleEvent);
+  window.addEventListener('storage', handleStorage);
+
+  let bc = null;
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('ems_realtime_sync');
+      bc.onmessage = (msg) => {
+        if (msg.data?.eventName === NOTIFICATION_EVENT) {
+          callback(msg.data?.detail);
+        }
+      };
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return () => {
+    window.removeEventListener(NOTIFICATION_EVENT, handleEvent);
+    window.removeEventListener('storage', handleStorage);
+    if (bc) {
+      try {
+        bc.close();
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
+};
+
+// Set up Supabase real-time cloud listeners if supported
+if (typeof window !== 'undefined') {
+  try {
+    supabase
+      .channel('ems_users_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        dispatchRealtimeEvent(NOTIFICATION_EVENT, { source: 'supabase_users' });
+      })
+      .subscribe();
+
+    supabase
+      .channel('ems_expenses_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
+        dispatchRealtimeEvent(EXPENSES_EVENT, { source: 'supabase_expenses' });
+        dispatchRealtimeEvent(NOTIFICATION_EVENT, { source: 'supabase_expenses' });
+      })
+      .subscribe();
+  } catch (err) {
+    // silently continue if Supabase realtime is unavailable
+  }
+}
+
 const defaultPreferences = {
   inAppNotifications: true,
   emailNotifications: true,
@@ -108,6 +197,7 @@ export const notificationMockService = {
       .from('users')
       .update({ role: cleanRole, updated_at: now })
       .eq('id', userId);
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'approveUser', userId });
     return { success: !error, error };
   },
 
@@ -115,6 +205,7 @@ export const notificationMockService = {
     const items = getStore();
     const updated = items.map((n) => (n.id === id ? { ...n, isRead: true } : n));
     saveStore(updated);
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'markAsRead', id });
     return updated;
   },
 
@@ -122,6 +213,7 @@ export const notificationMockService = {
     const items = getStore();
     const updated = items.map((n) => ({ ...n, isRead: true }));
     saveStore(updated);
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'markAllAsRead' });
     return updated;
   },
 
@@ -136,6 +228,7 @@ export const notificationMockService = {
     };
     const updated = [newNotif, ...items];
     saveStore(updated);
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'addNotification', notif: newNotif });
     return newNotif;
   },
 
@@ -143,11 +236,13 @@ export const notificationMockService = {
     const items = getStore();
     const updated = items.filter((n) => n.id !== id);
     saveStore(updated);
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'deleteNotification', id });
     return updated;
   },
 
   clearAll: async () => {
     saveStore([]);
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'clearAll' });
     return [];
   },
 
@@ -164,11 +259,13 @@ export const notificationMockService = {
   updatePreferences: async (prefs) => {
     const updated = { ...defaultPreferences, ...prefs };
     localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(updated));
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'preferences' });
     return updated;
   },
 
   resetNotifications: () => {
     localStorage.setItem(NOTIFS_STORAGE_KEY, JSON.stringify(mockNotificationsData));
+    dispatchRealtimeEvent(NOTIFICATION_EVENT, { action: 'reset' });
     return mockNotificationsData;
   },
 };

@@ -34,7 +34,7 @@ export default function ModeToggle({ className }) {
         "transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
         "active:scale-95 hover:scale-[1.03] overflow-hidden shadow-inner",
         isDark
-          ? "bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 border border-indigo-500/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
+          ? "bg-black border border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]"
           : "bg-zinc-200/90 hover:bg-zinc-200 border border-zinc-300/90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]",
         className
       )}
@@ -45,15 +45,15 @@ export default function ModeToggle({ className }) {
           /* Twinkling Night Stars */
           <div className="relative w-full h-full">
             <span
-              className="absolute left-2 top-2 size-1 rounded-full bg-indigo-200 animate-jitter-sparkle"
+              className="absolute left-2 top-2 size-1 rounded-full bg-zinc-400 animate-jitter-sparkle"
               style={{ animationDelay: "0ms" }}
             />
             <span
-              className="absolute left-4.5 top-4 size-1.5 rounded-full bg-white/90 animate-jitter-sparkle"
+              className="absolute left-4.5 top-4 size-1.5 rounded-full bg-white animate-jitter-sparkle"
               style={{ animationDelay: "300ms" }}
             />
             <span
-              className="absolute left-3 top-5 size-0.5 rounded-full bg-indigo-300 animate-jitter-sparkle"
+              className="absolute left-3 top-5 size-0.5 rounded-full bg-zinc-300 animate-jitter-sparkle"
               style={{ animationDelay: "600ms" }}
             />
           </div>
@@ -80,13 +80,13 @@ export default function ModeToggle({ className }) {
             ? "translate-x-[26px]"
             : "translate-x-0",
           isDark
-            ? "bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 text-indigo-950 ring-1 ring-white/30 shadow-black/50"
+            ? "bg-white text-zinc-950 ring-1 ring-zinc-700 shadow-md shadow-black/80"
             : "bg-white text-amber-500 ring-1 ring-zinc-300/80 shadow-md shadow-zinc-400/20"
         )}
       >
         {isDark ? (
           <Moon
-            className="size-3.5 fill-indigo-950 text-indigo-950 animate-jitter-moon stroke-[2.2]"
+            className="size-3.5 fill-zinc-950 text-zinc-950 animate-jitter-moon stroke-[2.2]"
           />
         ) : (
           <Sun

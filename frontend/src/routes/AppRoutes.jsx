@@ -18,6 +18,7 @@ import Reports from "../pages/reports/Reports";
 import FinanceDashboard from "../pages/finance/FinanceDashboard";
 import Notifications from "../pages/notifications/Notifications";
 import Settings from "../pages/settings/Settings";
+import Profile from "../pages/profile/Profile";
 import Users from "../pages/administration/Users";
 import Departments from "../pages/administration/Departments";
 import Projects from "../pages/administration/Projects";
@@ -243,6 +244,10 @@ export default function AppRoutes() {
 
           {/* Settings */}
           <Route path="/settings" element={<Settings />} />
+
+          {/* Profile / My Account */}
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/account" element={<Profile />} />
 
           {/* Fallback to Dashboard for any other route */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

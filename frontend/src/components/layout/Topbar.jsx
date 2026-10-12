@@ -79,6 +79,8 @@ const routeNames = {
   "/monitoring": "Application Monitoring",
   "/admin/monitoring": "Application Monitoring",
   "/settings": "Settings",
+  "/profile": "My Account",
+  "/account": "My Account",
 };
 
 // Global searchable items across the application
@@ -336,7 +338,7 @@ export default function Topbar() {
 
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link to="/settings" className="flex items-center gap-2">
+                  <Link to="/profile" className="flex items-center gap-2">
                     <User className="size-4" />
                     <span>My Account</span>
                   </Link>

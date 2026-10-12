@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import expenseStore from "../../services/expenseStore";
+import expenseStore, { subscribeToExpenses } from "../../services/expenseStore";
 
 const defaultTransactions = [
   {
@@ -104,12 +104,29 @@ function StatusBadge({ status }) {
 export default function RecentExpenses() {
   const navigate = useNavigate();
   const [search, setSearch] = React.useState("");
+  const [storedExpenses, setStoredExpenses] = React.useState(() => {
+    try {
+      return expenseStore.getExpenses() || [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  React.useEffect(() => {
+    const unsubscribe = subscribeToExpenses(() => {
+      try {
+        setStoredExpenses(expenseStore.getExpenses() || []);
+      } catch (e) {
+        // ignore
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const liveTransactions = React.useMemo(() => {
     try {
-      const stored = expenseStore.getExpenses();
-      if (Array.isArray(stored) && stored.length > 0) {
-        return stored.slice(0, 6).map((item) => ({
+      if (Array.isArray(storedExpenses) && storedExpenses.length > 0) {
+        return storedExpenses.slice(0, 6).map((item) => ({
           id: item.id,
           name: typeof item.claimant === "object" ? item.claimant?.name : (item.claimant || "Employee"),
           email: item.email || "employee@company.com",
@@ -125,7 +142,7 @@ export default function RecentExpenses() {
       console.warn("Could not read recent expenses:", e);
     }
     return defaultTransactions;
-  }, []);
+  }, [storedExpenses]);
 
   const filtered = liveTransactions.filter(
     (t) =>

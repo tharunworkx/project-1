@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Modal from '../../components/common/Modal';
-import expenseStore from '../../services/expenseStore';
+import expenseStore, { subscribeToExpenses } from '../../services/expenseStore';
 import { CustomSelect } from "@/components/ui/select";
 
 function StatusBadge({ status }) {
@@ -159,6 +159,11 @@ export default function Receipts() {
     };
 
     fetchLiveReceipts();
+    const unsubscribe = subscribeToExpenses(() => {
+      setAllExpenses(expenseStore.getExpenses());
+      fetchLiveReceipts();
+    });
+    return () => unsubscribe();
   }, []);
 
   // Filter to items that have an uploaded receipt or proof

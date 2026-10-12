@@ -23,7 +23,7 @@ import ExpenseTrend from "../../components/dashboard/ExpenseTrend";
 import ExpenseBreakdown from "../../components/dashboard/ExpenseBreakdown";
 import RecentExpenses from "../../components/dashboard/RecentExpenses";
 import BudgetProgress from "../../components/dashboard/BudgetProgress";
-import expenseStore from "../../services/expenseStore";
+import expenseStore, { subscribeToExpenses } from "../../services/expenseStore";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -48,10 +48,28 @@ export default function Dashboard() {
     }
   };
 
+  const [allExpenses, setAllExpenses] = useState(() => {
+    try {
+      return expenseStore.getExpenses() || [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   useEffect(() => {
     loadPendingRegistrations();
+    const unsubscribeExpenses = subscribeToExpenses(() => {
+      try {
+        setAllExpenses(expenseStore.getExpenses() || []);
+      } catch (e) {
+        // ignore
+      }
+    });
     const interval = setInterval(loadPendingRegistrations, 10000);
-    return () => clearInterval(interval);
+    return () => {
+      unsubscribeExpenses();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleQuickApprove = async (pUser) => {
@@ -91,8 +109,6 @@ export default function Dashboard() {
       setApprovingId(null);
     }
   };
-
-  const allExpenses = expenseStore.getExpenses();
 
   const pendingCount = allExpenses.filter(
     (e) => e.status && e.status.toLowerCase() === "pending"

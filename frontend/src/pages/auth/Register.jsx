@@ -81,19 +81,19 @@ export const Register = () => {
     <div className="dark relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-black text-zinc-100 overflow-hidden select-none">
       {/* Background Animated Glowing Dots Pattern on Pure Black */}
       <DottedGlowBackground
-        className="pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_90%)]"
-        opacity={0.85}
-        gap={14}
-        radius={1.7}
-        color="rgba(120, 120, 120, 0.4)"
-        darkColor="rgba(140, 140, 140, 0.35)"
-        glowColor="rgba(159, 232, 112, 0.85)"
-        darkGlowColor="rgba(159, 232, 112, 0.85)"
+        className="pointer-events-none mask-radial-to-90% mask-radial-at-center"
+        opacity={0.45}
+        gap={13}
+        radius={1.3}
+        color="rgba(255, 255, 255, 0.3)"
+        darkColor="rgba(255, 255, 255, 0.3)"
+        glowColor="rgba(255, 255, 255, 0.7)"
+        darkGlowColor="rgba(255, 255, 255, 0.7)"
         backgroundOpacity={0}
         speedMin={0.3}
-        speedMax={1.4}
+        speedMax={1.5}
         speedScale={1}
-        />
+      />
 
       {/* Permanently Dark Themed Clean Register Card */}
       <div className="relative z-10 w-full max-w-[440px] bg-[#121214] text-zinc-100 rounded-xl shadow-2xl border border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
@@ -239,7 +239,6 @@ export const Register = () => {
                     options={[
                       { value: "Employee", label: "Employee" },
                       { value: "Manager", label: "Manager" },
-                      { value: "Finance Executive", label: "Finance Executive" },
                       { value: "Finance Manager / CFO", label: "Finance Manager / CFO" },
                       { value: "Admin", label: "Admin" },
                     ]}

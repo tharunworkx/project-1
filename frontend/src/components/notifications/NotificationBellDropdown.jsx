@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import notificationMockService from '@/services/mock/notificationMockService';
+import notificationMockService, { subscribeToNotifications } from '@/services/mock/notificationMockService';
 import { useToast } from '@/context/ToastContext';
 
 const getNotifIcon = (type) => {
@@ -80,8 +80,15 @@ export const NotificationBellDropdown = () => {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 8000);
-    return () => clearInterval(interval);
+    const unsubscribe = subscribeToNotifications(() => {
+      loadNotifications();
+    });
+    // Active heartbeat check every 5 seconds as fallback
+    const interval = setInterval(loadNotifications, 5000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleMarkAsRead = async (e, id) => {

@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import { useAuth } from '../../context/AuthContext';
-import expenseStore from '../../services/expenseStore';
+import expenseStore, { subscribeToExpenses } from '../../services/expenseStore';
 import {
   Check,
   X,
@@ -194,41 +194,83 @@ export const ApprovalQueue = () => {
           }
         }
 
-        if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
-          const pendingFromDb = dbExpenses
-            .filter((e) => (e.status || '').toUpperCase() === 'PENDING')
-            .map((e) => {
-              const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
-              const initials = claimantName.slice(0, 2).toUpperCase();
-              const numAmount = parseFloat(e.amount) || 0;
-              const formattedAmount = `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-              const formattedDate = e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
-              return {
-                id: `EXP-${e.id}`,
-                dbId: e.id,
-                claimant: claimantName,
-                email: e.submittedBy || 'employee@company.com',
-                avatarFallback: initials,
-                department: e.department || 'Engineering',
-                merchant: e.title || 'Corporate Vendor',
-                title: e.description || e.title || 'Expense Claim',
-                category: e.category || 'General',
-                paymentMode: 'Direct Reimbursement',
-                amount: formattedAmount,
-                numericAmount: numAmount,
-                date: formattedDate,
-                status: 'pending',
-                policyFlag: numAmount > 25000 ? 'Requires VP Sign-off' : (e.category?.includes('Food') && numAmount > 5000 ? 'Meal limit exceeded' : null),
-              };
-            });
-          setItems([...pendingFromDb, ...pendingApprovalsData]);
-        }
+        // 1. Pending from DB
+        const pendingFromDb = (Array.isArray(dbExpenses) ? dbExpenses : [])
+          .filter((e) => (e.status || '').toUpperCase() === 'PENDING')
+          .map((e) => {
+            const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
+            const initials = claimantName.slice(0, 2).toUpperCase();
+            const numAmount = parseFloat(e.amount) || 0;
+            const formattedAmount = `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            const formattedDate = e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+            return {
+              id: `EXP-${e.id}`,
+              dbId: e.id,
+              claimant: claimantName,
+              email: e.submittedBy || 'employee@company.com',
+              avatarFallback: initials,
+              department: e.department || 'Engineering',
+              merchant: e.title || 'Corporate Vendor',
+              title: e.description || e.title || 'Expense Claim',
+              category: e.category || 'General',
+              paymentMode: 'Direct Reimbursement',
+              amount: formattedAmount,
+              numericAmount: numAmount,
+              date: formattedDate,
+              status: 'pending',
+              policyFlag: numAmount > 25000 ? 'Requires VP Sign-off' : (e.category?.includes('Food') && numAmount > 5000 ? 'Meal limit exceeded' : null),
+            };
+          });
+
+        // 2. Pending from Local Store
+        const localPending = (expenseStore.getPendingApprovals() || []).map((e) => {
+          const numAmount = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount).replace(/[^0-9.-]+/g, '')) || 0;
+          const formattedAmount = e.amount && String(e.amount).startsWith('₹')
+            ? e.amount
+            : `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          const claimantName = e.claimant || (e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee'));
+          const initials = e.avatarFallback || claimantName.slice(0, 2).toUpperCase();
+
+          return {
+            id: e.id,
+            claimant: claimantName,
+            email: e.email || e.submittedBy || 'employee@company.com',
+            avatarFallback: initials,
+            avatar: e.avatar || null,
+            department: e.department || 'Engineering',
+            merchant: e.merchant || e.title || 'Corporate Vendor',
+            title: e.title || e.description || 'Expense Claim',
+            category: e.category || 'General',
+            paymentMode: e.paymentMode || 'Direct Reimbursement',
+            amount: formattedAmount,
+            numericAmount: numAmount,
+            date: e.date || 'Today',
+            status: 'pending',
+            policyFlag: numAmount > 25000 ? 'Requires VP Sign-off' : (e.category?.includes('Food') && numAmount > 5000 ? 'Meal limit exceeded' : null),
+          };
+        });
+
+        // Merge: local store -> DB -> mock pending
+        const mergedMap = new Map();
+        localPending.forEach((item) => mergedMap.set(item.id, item));
+        pendingFromDb.forEach((item) => {
+          if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+        });
+        pendingApprovalsData.forEach((item) => {
+          if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+        });
+
+        setItems(Array.from(mergedMap.values()));
       } catch (err) {
         console.warn('Could not load pending expenses from backend/Supabase:', err);
       }
     };
 
     loadPendingApprovals();
+    const unsubscribe = subscribeToExpenses(() => {
+      loadPendingApprovals();
+    });
+    return () => unsubscribe();
   }, []);
 
   const toggleSelect = (id) => {

@@ -1,3 +1,5 @@
+import notificationMockService, { dispatchRealtimeEvent, EXPENSES_EVENT } from './mock/notificationMockService';
+
 /**
  * Central Expense Data Store
  * Persists expenses, drafts, and proof images to localStorage
@@ -284,6 +286,9 @@ export const expenseStore = {
       }
     }
 
+    // Trigger instant real-time sync across all components and browser tabs
+    dispatchRealtimeEvent(EXPENSES_EVENT, { action: 'save', expense: newExpense });
+
     return newExpense;
   },
 
@@ -292,6 +297,7 @@ export const expenseStore = {
     const now = new Date();
     const timeFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+    let updatedTarget = null;
     const updatedList = list.map((item) => {
       if (item.id === id) {
         const history = [...(item.auditHistory || [])];
@@ -303,11 +309,12 @@ export const expenseStore = {
           notes: reason,
         });
 
-        return {
+        updatedTarget = {
           ...item,
           status: newStatus,
           auditHistory: history,
         };
+        return updatedTarget;
       }
       return item;
     });
@@ -317,6 +324,25 @@ export const expenseStore = {
     } catch (err) {
       console.warn('Status update localStorage error:', err);
     }
+
+    // Real-time broadcast event
+    dispatchRealtimeEvent(EXPENSES_EVENT, { action: 'updateStatus', id, status: newStatus });
+
+    // Generate real-time system notification for user & manager
+    try {
+      notificationMockService.addNotification({
+        title: `Expense Claim ${newStatus}`,
+        message: `Claim ${id} was marked as ${newStatus}${reason ? `: "${reason}"` : ''} by Manager.`,
+        type: newStatus === 'Approved' ? 'Expense Approved' : 'Expense Rejected',
+        relatedModule: 'Approvals',
+        link: `/expenses/${id}`,
+        path: `/expenses/${id}`,
+        priority: newStatus === 'Approved' ? 'normal' : 'high',
+      });
+    } catch (notifErr) {
+      console.warn('Could not dispatch updateStatus notification:', notifErr);
+    }
+
     return updatedList;
   },
 
@@ -328,6 +354,8 @@ export const expenseStore = {
     } catch (err) {
       console.warn('Delete expense localStorage error:', err);
     }
+
+    dispatchRealtimeEvent(EXPENSES_EVENT, { action: 'delete', id });
     return filtered;
   },
 
@@ -348,6 +376,49 @@ export const expenseStore = {
     const list = expenseStore.getExpenses();
     return list.filter((item) => item.status && item.status.toLowerCase() === 'draft');
   },
+};
+
+export const subscribeToExpenses = (callback) => {
+  if (typeof window === 'undefined') return () => {};
+
+  const handleEvent = (e) => {
+    callback(e?.detail);
+  };
+
+  const handleStorage = (e) => {
+    if (e.key === STORAGE_KEY) {
+      callback();
+    }
+  };
+
+  window.addEventListener(EXPENSES_EVENT, handleEvent);
+  window.addEventListener('storage', handleStorage);
+
+  let bc = null;
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel('ems_realtime_sync');
+      bc.onmessage = (msg) => {
+        if (msg.data?.eventName === EXPENSES_EVENT) {
+          callback(msg.data?.detail);
+        }
+      };
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return () => {
+    window.removeEventListener(EXPENSES_EVENT, handleEvent);
+    window.removeEventListener('storage', handleStorage);
+    if (bc) {
+      try {
+        bc.close();
+      } catch (e) {
+        // ignore
+      }
+    }
+  };
 };
 
 export default expenseStore;

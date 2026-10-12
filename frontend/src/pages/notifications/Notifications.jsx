@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import notificationMockService from '@/services/mock/notificationMockService';
+import notificationMockService, { subscribeToNotifications } from '@/services/mock/notificationMockService';
 
 const getNotifIcon = (type) => {
   const t = (type || '').toLowerCase();
@@ -106,6 +106,10 @@ export const Notifications = () => {
 
   useEffect(() => {
     loadNotifications();
+    const unsubscribe = subscribeToNotifications(() => {
+      loadNotifications();
+    });
+    return () => unsubscribe();
   }, [filter]);
 
   const handleMarkAsRead = async (id) => {

@@ -316,16 +316,6 @@ export const Settings = () => {
               </div>
             </div>
           </CardContent>
-
-          <CardFooter className="flex justify-end pt-2 pb-5 px-6 border-t border-border/60">
-            <Button
-              type="submit"
-              className="gap-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-5 py-2"
-            >
-              <Save className="size-3.5" />
-              <span>Save Preferences</span>
-            </Button>
-          </CardFooter>
         </Card>
       </form>
     </div>

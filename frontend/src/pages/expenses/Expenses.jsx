@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
+import expenseStore, { subscribeToExpenses } from '../../services/expenseStore';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import {
   Plus,
@@ -33,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CustomSelect } from "@/components/ui/select";
+import CreateExpenseModal from './CreateExpenseModal';
 
 const mockExpenses = [
   {
@@ -153,77 +155,132 @@ function StatusBadge({ status }) {
 
 export const Expenses = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [expenseList, setExpenseList] = useState(mockExpenses);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
-    const loadExpenses = async () => {
+    if (searchParams.get('new') === 'true' || searchParams.get('create') === 'true') {
+      setIsCreateModalOpen(true);
+    }
+  }, [searchParams]);
+
+  const loadExpenses = useCallback(async () => {
+    try {
+      let dbExpenses = [];
       try {
-        let dbExpenses = [];
-        try {
-          dbExpenses = await expenseService.getExpenses();
-        } catch (apiErr) {
-          console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
-        }
-
-        // Direct Supabase query fallback (only if valid Supabase cloud key is present)
-        if ((!Array.isArray(dbExpenses) || dbExpenses.length === 0) && isSupabaseConfigured()) {
-          const { data: supaExpenses, error: supaErr } = await supabase
-            .from('expenses')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (!supaErr && Array.isArray(supaExpenses)) {
-            dbExpenses = supaExpenses.map((e) => ({
-              id: e.id,
-              title: e.title,
-              description: e.description,
-              amount: e.amount,
-              category: e.category,
-              department: e.department,
-              submittedBy: e.submitted_by,
-              approvedBy: e.approved_by,
-              status: e.status,
-              createdAt: e.created_at,
-              receiptUrl: e.receipt_url,
-              currency: e.currency,
-              date: e.date,
-            }));
-          }
-        }
-
-        if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
-          const mapped = dbExpenses.map((e) => {
-            const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
-            const initials = claimantName.slice(0, 2).toUpperCase();
-            const formattedAmount = e.amount ? `₹${Number(e.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹0.00';
-            const formattedDate = e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
-            return {
-              id: `EXP-${e.id}`,
-              merchant: e.title || 'Corporate Vendor',
-              title: e.description || e.title || 'Expense Claim',
-              category: e.category || 'General',
-              claimant: claimantName,
-              email: e.submittedBy || 'employee@company.com',
-              avatarFallback: initials,
-              department: e.department || 'General',
-              paymentMode: 'Direct Reimbursement',
-              amount: formattedAmount,
-              date: formattedDate,
-              status: e.status ? (e.status.charAt(0).toUpperCase() + e.status.slice(1).toLowerCase()) : 'Pending',
-              receiptUrl: e.receiptUrl,
-              proofImage: e.receiptUrl,
-            };
-          });
-          setExpenseList([...mapped, ...mockExpenses]);
-        }
-      } catch (err) {
-        console.warn('Could not fetch expenses from API/Supabase:', err);
+        dbExpenses = await expenseService.getExpenses();
+      } catch (apiErr) {
+        console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
       }
-    };
-    loadExpenses();
+
+      // Direct Supabase query fallback (only if valid Supabase cloud key is present)
+      if ((!Array.isArray(dbExpenses) || dbExpenses.length === 0) && isSupabaseConfigured()) {
+        const { data: supaExpenses, error: supaErr } = await supabase
+          .from('expenses')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!supaErr && Array.isArray(supaExpenses)) {
+          dbExpenses = supaExpenses.map((e) => ({
+            id: e.id,
+            title: e.title,
+            description: e.description,
+            amount: e.amount,
+            category: e.category,
+            department: e.department,
+            submittedBy: e.submitted_by,
+            approvedBy: e.approved_by,
+            status: e.status,
+            createdAt: e.created_at,
+            receiptUrl: e.receipt_url,
+            currency: e.currency,
+            date: e.date,
+          }));
+        }
+      }
+
+      // Also read local reactive store (contains newly created, edited & offline expenses)
+      const storeItems = expenseStore.getExpenses() || [];
+      const mappedStore = storeItems.map((e) => {
+        const numAmount = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount).replace(/[^0-9.-]+/g, '')) || 0;
+        const formattedAmount = e.amount && String(e.amount).startsWith('₹')
+          ? e.amount
+          : `₹${numAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        const claimantName = e.claimant || (e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee'));
+        const initials = e.avatarFallback || claimantName.slice(0, 2).toUpperCase();
+
+        return {
+          id: e.id,
+          merchant: e.merchant || e.title || 'Corporate Vendor',
+          title: e.title || e.description || 'Expense Claim',
+          category: e.category || 'General',
+          claimant: claimantName,
+          email: e.email || e.submittedBy || 'employee@company.com',
+          avatarFallback: initials,
+          avatar: e.avatar || null,
+          department: e.department || 'General',
+          paymentMode: e.paymentMode || 'Direct Reimbursement',
+          amount: formattedAmount,
+          date: e.date || 'Today',
+          status: e.status ? (e.status.charAt(0).toUpperCase() + e.status.slice(1).toLowerCase()) : 'Pending',
+          receiptUrl: e.receiptUrl || e.proofImage,
+          proofImage: e.receiptUrl || e.proofImage,
+        };
+      });
+
+      let mappedDb = [];
+      if (Array.isArray(dbExpenses) && dbExpenses.length > 0) {
+        mappedDb = dbExpenses.map((e) => {
+          const claimantName = e.submittedBy?.includes('@') ? e.submittedBy.split('@')[0] : (e.submittedBy || 'Employee');
+          const initials = claimantName.slice(0, 2).toUpperCase();
+          const formattedAmount = e.amount ? `₹${Number(e.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹0.00';
+          const formattedDate = e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+          return {
+            id: `EXP-${e.id}`,
+            merchant: e.title || 'Corporate Vendor',
+            title: e.description || e.title || 'Expense Claim',
+            category: e.category || 'General',
+            claimant: claimantName,
+            email: e.submittedBy || 'employee@company.com',
+            avatarFallback: initials,
+            department: e.department || 'General',
+            paymentMode: 'Direct Reimbursement',
+            amount: formattedAmount,
+            date: formattedDate,
+            status: e.status ? (e.status.charAt(0).toUpperCase() + e.status.slice(1).toLowerCase()) : 'Pending',
+            receiptUrl: e.receiptUrl,
+            proofImage: e.receiptUrl,
+          };
+        });
+      }
+
+      // Merge: store items highest priority -> DB items -> initial mock records
+      const mergedMap = new Map();
+      mappedStore.forEach((item) => mergedMap.set(item.id, item));
+      mappedDb.forEach((item) => {
+        if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+      });
+      mockExpenses.forEach((item) => {
+        if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+      });
+
+      setExpenseList(Array.from(mergedMap.values()));
+    } catch (err) {
+      console.warn('Could not fetch expenses from API/Supabase:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    loadExpenses();
+    // Subscribe to instant real-time expenses updates (modal creates, approvals, etc.)
+    const unsubscribe = subscribeToExpenses(() => {
+      loadExpenses();
+    });
+    return () => unsubscribe();
+  }, [loadExpenses]);
 
   const filtered = expenseList.filter((item) => {
     const matchesSearch =
@@ -256,11 +313,13 @@ export const Expenses = () => {
             <Download className="size-3.5" />
             <span>Export CSV</span>
           </Button>
-          <Button asChild size="sm" className="gap-2 text-xs">
-            <Link to="/expenses/new">
-              <Plus className="size-3.5" />
-              <span>Create Expense</span>
-            </Link>
+          <Button
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="gap-2 text-xs cursor-pointer"
+          >
+            <Plus className="size-3.5" />
+            <span>Create Expense</span>
           </Button>
         </div>
       </div>
@@ -383,6 +442,19 @@ export const Expenses = () => {
           </div>
         </CardContent>
       </Card>
+
+      <CreateExpenseModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          if (searchParams.get('new') || searchParams.get('create')) {
+            searchParams.delete('new');
+            searchParams.delete('create');
+            setSearchParams(searchParams);
+          }
+        }}
+        onSuccess={loadExpenses}
+      />
     </div>
   );
 };
