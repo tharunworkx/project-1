@@ -76,18 +76,6 @@ textarea {
   font: inherit;
 }
 
-/* Remove number input spin buttons / up-down arrows in all views (desktop, laptop, tablet, mobile) */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none !important;
-  margin: 0 !important;
-}
-
-input[type="number"] {
-  -moz-appearance: textfield !important;
-  appearance: textfield !important;
-}
-
 select {
   color-scheme: light;
 }
@@ -235,14 +223,361 @@ select option {
   * {
     @apply border-border outline-ring/50;
   }
-
   body {
     @apply bg-background text-foreground;
   }
-
   html {
     @apply font-sans;
   }
+}
+
+/* Jitter "Animated Search Bar" Keyframes & Effects */
+@keyframes jitter-grow-in {
+  0% {
+    transform: scale(0.86);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes jitter-icon-pop {
+  0% {
+    transform: scale(0.5) rotate(-15deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes jitter-letter-in {
+  0% {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-jitter-grow {
+  animation: jitter-grow-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-jitter-icon {
+  animation: jitter-icon-pop 480ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.animate-jitter-letter {
+  display: inline-block;
+  animation: jitter-letter-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Jitter "On / Off Toggle" Snap Physics */
+@keyframes jitter-snap-on {
+  0% {
+    transform: translateX(0) scale(1, 1);
+  }
+  30% {
+    transform: translateX(11px) scale(1.24, 0.88);
+  }
+  70% {
+    transform: translateX(29px) scale(0.92, 1.08);
+  }
+  100% {
+    transform: translateX(26px) scale(1, 1);
+  }
+}
+
+@keyframes jitter-snap-off {
+  0% {
+    transform: translateX(26px) scale(1, 1);
+  }
+  30% {
+    transform: translateX(15px) scale(1.24, 0.88);
+  }
+  70% {
+    transform: translateX(-3px) scale(0.92, 1.08);
+  }
+  100% {
+    transform: translateX(0) scale(1, 1);
+  }
+}
+
+
+
+@keyframes jitter-rotate-sun {
+  0% {
+    transform: rotate(-120deg) scale(0.4);
+    opacity: 0;
+  }
+  65% {
+    transform: rotate(15deg) scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes jitter-rotate-moon {
+  0% {
+    transform: rotate(120deg) scale(0.4);
+    opacity: 0;
+  }
+  65% {
+    transform: rotate(-15deg) scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes jitter-sparkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.75);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+.animate-jitter-snap-on {
+  animation: jitter-snap-on 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-jitter-snap-off {
+  animation: jitter-snap-off 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-jitter-sun {
+  animation: jitter-rotate-sun 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-jitter-moon {
+  animation: jitter-rotate-moon 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-jitter-sparkle {
+  animation: jitter-sparkle 1.8s ease-in-out infinite;
+}
+
+/* Jitter "Banking App: Cards" Notification Physics */
+@keyframes jitter-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jitter-card-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+  }
+}
+
+@keyframes jitter-notif-dropdown-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jitter-bell-wiggle {
+  0% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes jitter-toast-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-jitter-card-in {
+  animation: jitter-card-in 520ms var(--ease-overshoot-linear) both;
+  will-change: transform, opacity;
+}
+
+.animate-jitter-card-out {
+  animation: jitter-card-out 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-jitter-dropdown {
+  animation: jitter-notif-dropdown-in 440ms var(--ease-overshoot-linear) both !important;
+  transform-origin: top right;
+  will-change: transform, opacity;
+}
+
+.animate-jitter-bell {
+  transform-origin: top center;
+  animation: jitter-bell-wiggle 650ms ease-in-out;
+}
+
+.animate-jitter-toast-in {
+  animation: jitter-toast-in 500ms var(--ease-overshoot-linear) both;
+  will-change: transform, opacity;
+}
+
+/* ==========================================================================
+   LOGO EXPAND-AND-COLLAPSE ANIMATION SEQUENCE
+   - 0.0s – 0.5s (0% – 14.7%): Initial State (Icon perfectly centered, text hidden)
+   - 0.5s – 1.2s (14.7% – 35.3%): Expansion (Icon translates left, text unmasks & expands to right, 100% opacity)
+   - 1.2s – 2.0s (35.3% – 58.8%): Hold (Full lockup rests horizontally centered together)
+   - 2.0s – 2.7s (58.8% – 79.4%): Collapse (Text collapses back, fades to 0%, icon slides to exact center)
+   - 2.7s – 3.4s (79.4% – 100%): Pause at initial center state before looping
+   ========================================================================== */
+
+/* ==========================================================================
+   LOGO ENTRANCE ANIMATION (Plays once on load, remains stable in center)
+   ========================================================================== */
+
+@keyframes logo-expand-once-text {
+  0%, 15% {
+    width: 0px;
+    opacity: 0;
+    margin-left: 0px;
+    clip-path: inset(0 100% 0 0);
+    transform: translateX(-12px);
+  }
+  100% {
+    width: var(--logo-text-width, 175px);
+    opacity: 1;
+    margin-left: var(--logo-gap, 12px);
+    clip-path: inset(0 0% 0 0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes logo-expand-once-icon {
+  0%, 15% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+  65% {
+    transform: scale(1.03);
+    filter: drop-shadow(0 2px 14px rgba(255, 255, 255, 0.15));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 10px rgba(255, 255, 255, 0.1));
+  }
+}
+
+/* One-time entrance animation: plays once, holds final stable centered state */
+.animate-logo-expand-text {
+  animation: logo-expand-once-text 1.15s cubic-bezier(0.16, 1, 0.3, 1) 0.15s 1 normal forwards;
+  will-change: width, opacity, clip-path, transform, margin-left;
+}
+
+.animate-logo-expand-icon {
+  animation: logo-expand-once-icon 1.15s cubic-bezier(0.16, 1, 0.3, 1) 0.15s 1 normal forwards;
+  will-change: transform, filter;
+}
+
+/* Continuous loop keyframes (for preview / optional looping) */
+@keyframes logo-expand-collapse-text {
+  0%, 14.7% {
+    width: 0px;
+    opacity: 0;
+    margin-left: 0px;
+    clip-path: inset(0 100% 0 0);
+    transform: translateX(-10px);
+  }
+  35.3%, 58.8% {
+    width: var(--logo-text-width, 175px);
+    opacity: 1;
+    margin-left: var(--logo-gap, 12px);
+    clip-path: inset(0 0% 0 0);
+    transform: translateX(0);
+  }
+  79.4%, 100% {
+    width: 0px;
+    opacity: 0;
+    margin-left: 0px;
+    clip-path: inset(0 100% 0 0);
+    transform: translateX(-10px);
+  }
+}
+
+@keyframes logo-expand-collapse-icon {
+  0%, 14.7% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+  35.3%, 58.8% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 2px 12px rgba(255, 255, 255, 0.12));
+  }
+  79.4%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+  }
+}
+
+.animate-logo-expand-text-loop {
+  animation: logo-expand-collapse-text 3.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  will-change: width, opacity, clip-path, transform, margin-left;
+}
+
+.animate-logo-expand-icon-loop {
+  animation: logo-expand-collapse-icon 3.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  will-change: transform, filter;
 }
 
 /* Sequential Login Brand Open Animation */
@@ -301,3 +636,6 @@ select option {
   animation: subtitleFade 0.6s ease-out 1.45s forwards;
   opacity: 0;
 }
+
+
+

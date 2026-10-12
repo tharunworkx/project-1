@@ -106,51 +106,68 @@ export const Users = () => {
     department: 'Engineering',
   });
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      let finalUsers = [];
+  const loadUsers = async () => {
+    let backendUsersList = [];
+    let supaUsersList = [];
+    try {
+      const dbUsers = await userService.getUsers();
+      if (Array.isArray(dbUsers) && dbUsers.length > 0) {
+        backendUsersList = dbUsers;
+      }
+    } catch (err) {
+      // Backend optional / offline
+    }
+
+    if (isSupabaseConfigured()) {
       try {
-        const dbUsers = await userService.getUsers();
-        if (Array.isArray(dbUsers) && dbUsers.length > 0) {
-          finalUsers = dbUsers;
+        const { data: supaUsers, error: supaErr } = await supabase
+          .from('users')
+          .select('*')
+          .order('id', { ascending: false });
+        if (!supaErr && Array.isArray(supaUsers)) {
+          supaUsersList = supaUsers;
         }
-      } catch (err) {
-        console.warn('Backend unavailable, fetching users directly from Supabase:', err);
+      } catch (supaErr) {
+        console.warn('Could not fetch from Supabase:', supaErr);
       }
+    }
 
-      if (finalUsers.length === 0 && isSupabaseConfigured()) {
-        try {
-          const { data: supaUsers } = await supabase
-            .from('users')
-            .select('*')
-            .order('id', { ascending: false });
-          if (Array.isArray(supaUsers)) {
-            finalUsers = supaUsers;
-          }
-        } catch (supaErr) {
-          console.warn('Could not fetch from Supabase:', supaErr);
-        }
-      }
+    // Authoritative merge: Supabase users take priority for registrations & approvals
+    const userMap = new Map();
+    for (const u of backendUsersList) {
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+    }
+    for (const u of supaUsersList) {
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+    }
+    const finalUsers = Array.from(userMap.values());
 
-      const mapped = finalUsers.map((u) => {
-        const fullName = `${u.firstName || u.first_name || ''} ${u.lastName || u.last_name || ''}`.trim() || u.name || u.email.split('@')[0];
-        const initials = fullName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
-        return {
-          id: `usr_${u.id}`,
-          rawId: u.id,
-          name: fullName,
-          email: u.email,
-          avatarFallback: initials,
-          role: u.role || 'Employee',
-          department: u.department || 'General',
-          status: 'Active',
-          lastActive: 'Just now',
-        };
-      });
+    const mapped = finalUsers.map((u) => {
+      const fullName = `${u.firstName || u.first_name || ''} ${u.lastName || u.last_name || ''}`.trim() || u.name || u.email.split('@')[0];
+      const initials = fullName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+      const isPending = typeof u.role === 'string' && u.role.startsWith('PENDING:');
+      const cleanRole = isPending ? u.role.replace('PENDING:', '').trim() : (u.role || 'Employee');
 
-      setUsers(mapped);
-    };
+      return {
+        id: `usr_${u.id}`,
+        rawId: u.id,
+        name: fullName,
+        email: u.email,
+        avatarFallback: initials,
+        role: cleanRole,
+        rawRole: u.role,
+        isPending,
+        department: u.department || 'General',
+        status: isPending ? 'Pending Approval' : 'Active',
+        lastActive: isPending ? 'Awaiting Approval' : 'Active',
+        createdAt: u.created_at || u.createdAt,
+      };
+    });
 
+    setUsers(mapped);
+  };
+
+  useEffect(() => {
     loadUsers();
   }, []);
 
