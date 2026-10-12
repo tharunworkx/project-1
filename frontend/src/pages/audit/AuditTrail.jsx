@@ -36,6 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import { CustomSelect } from "@/components/ui/select";
 
 const mockAuditLogs = [
@@ -363,15 +364,16 @@ export default function AuditTrail() {
       {/* Filters and Search Bar */}
       <Card className="shadow-xs">
         <CardContent className="p-4 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
+          <div className="flex-1">
+            <AnimatedSearchBar
+              size="md"
               placeholder="Search by Actor, Entity ID (EXP-...), or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10 rounded-xl"
+              onClear={() => setSearchTerm('')}
             />
           </div>
+
 
           <div className="flex flex-wrap items-center gap-2">
             <CustomSelect

@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import Modal from '../../components/common/Modal';
 import expenseStore from '../../services/expenseStore';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../services/supabaseStorage';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import expenseService from '../../services/expenseService';
 
 export const ExpenseDetails = () => {
@@ -75,8 +75,8 @@ export const ExpenseDetails = () => {
           // Fall back to Supabase
         }
 
-        // If not found in backend, query Supabase directly
-        if (!dbData) {
+        // If not found in backend, query Supabase directly (only if configured)
+        if (!dbData && isSupabaseConfigured()) {
           const { data: supaData, error: supaErr } = await supabase
             .from('expenses')
             .select('*')

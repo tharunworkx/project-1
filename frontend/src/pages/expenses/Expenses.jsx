@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import expenseService from '../../services/expenseService';
-import { supabase } from '../../services/supabaseStorage';
-import expenseStore from '../../services/expenseStore';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import {
   Plus,
   Search,
@@ -26,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -167,8 +167,8 @@ export const Expenses = () => {
           console.warn('Backend API getExpenses offline, querying Supabase directly:', apiErr);
         }
 
-        // Direct Supabase query fallback
-        if (!Array.isArray(dbExpenses) || dbExpenses.length === 0) {
+        // Direct Supabase query fallback (only if valid Supabase cloud key is present)
+        if ((!Array.isArray(dbExpenses) || dbExpenses.length === 0) && isSupabaseConfigured()) {
           const { data: supaExpenses, error: supaErr } = await supabase
             .from('expenses')
             .select('*')
@@ -311,16 +311,15 @@ export const Expenses = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <div className="relative w-48 sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                type="text"
+            <div className="w-48 sm:w-64">
+              <AnimatedSearchBar
                 placeholder="Filter claims..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs"
+                onClear={() => setSearch("")}
               />
             </div>
+
             <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

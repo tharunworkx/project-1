@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import userService from '../../services/userService';
-import { supabase } from '../../services/supabaseStorage';
+import { supabase, isSupabaseConfigured } from '../../services/supabaseStorage';
 import {
   Plus,
   Search,
@@ -35,6 +35,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnimatedSearchBar } from "@/components/ui/AnimatedSearchBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,11 +135,18 @@ export const Users = () => {
       console.warn('Could not fetch users directly from Supabase:', supaErr);
     }
 
-    let backendUsersList = [];
-    try {
-      const dbUsers = await userService.getUsers();
-      if (Array.isArray(dbUsers)) {
-        backendUsersList = dbUsers;
+      if (finalUsers.length === 0 && isSupabaseConfigured()) {
+        try {
+          const { data: supaUsers } = await supabase
+            .from('users')
+            .select('*')
+            .order('id', { ascending: false });
+          if (Array.isArray(supaUsers)) {
+            finalUsers = supaUsers;
+          }
+        } catch (supaErr) {
+          console.warn('Could not fetch from Supabase:', supaErr);
+        }
       }
     } catch (err) {
       // Backend optional / offline
@@ -499,31 +507,28 @@ export const Users = () => {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-              <Input
-                type="text"
+          <div className="flex items-center gap-2.5">
+            <div className="w-48 sm:w-64">
+              <AnimatedSearchBar
                 placeholder="Filter users..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-xs rounded-full bg-muted/60 border-border/80 focus-visible:bg-background shadow-xs w-full"
+                onClear={() => setSearch('')}
               />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button
-                size="sm"
-                className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs cursor-pointer"
-                onClick={() => setModalOpen(true)}
-              >
-                <Plus className="size-3.5" />
-                <span>Invite Member</span>
-              </Button>
-              <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-initial gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs cursor-pointer">
-                <Download className="size-3.5" />
-                <span>Export</span>
-              </Button>
-            </div>
+
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-full shadow-xs"
+              onClick={() => setModalOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              <span>Invite Member</span>
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs rounded-full border-border/80 bg-background/50 hover:bg-muted shadow-2xs">
+              <Download className="size-3.5" />
+              <span>Export</span>
+            </Button>
           </div>
         </CardHeader>
 
