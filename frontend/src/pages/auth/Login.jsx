@@ -7,6 +7,7 @@ import {
   Check,
 } from 'lucide-react';
 import { DottedGlowBackground } from '@/components/ui/dotted-glow-background';
+import { ExpenseHubLogo } from '@/components/common/ExpenseHubLogo';
 import { useAuth } from '../../context/AuthContext';
 
 export const Login = () => {
@@ -72,13 +73,30 @@ export const Login = () => {
 
       {/* Permanently Dark Themed Clean Login Card */}
       <div className="relative z-10 w-full max-w-[390px] sm:max-w-[410px] bg-[#121214] text-zinc-100 rounded-xl shadow-2xl border border-zinc-800 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-200">
-        {/* Title */}
-        <div className="text-center mb-5">
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight">
-            Welcome to ExpenseHub
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1 font-normal">
-            Sign in to manage and track your corporate expenses
+        {/* Title & Brand Header with sequence animation */}
+        <div className="text-center mb-5 flex flex-col items-center">
+          <div className="inline-flex items-center justify-center gap-3">
+            <div className="shrink-0 animate-login-logo flex items-center justify-center text-white">
+              <ExpenseHubLogo className="h-9 sm:h-10 w-auto" />
+            </div>
+            <div className="whitespace-nowrap flex items-center">
+              <h1 className="text-2xl sm:text-[26px] font-bold text-white tracking-tight leading-none inline-flex">
+                {"ExpenseHub".split("").map((letter, index) => (
+                  <span
+                    key={index}
+                    className="inline-block animate-login-letter"
+                    style={{
+                      animationDelay: `${0.45 + index * 0.075}s`,
+                    }}
+                  >
+                    {letter}
+                  </span>
+                ))}
+              </h1>
+            </div>
+          </div>
+          <p className="text-xs text-zinc-400 mt-2 font-normal animate-login-subtitle">
+            Sign in with your department and assigned role
           </p>
         </div>
 
