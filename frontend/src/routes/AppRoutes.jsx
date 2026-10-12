@@ -133,14 +133,14 @@ export default function AppRoutes() {
             }
           />
 
-          {/* Financial Report and Analytics (Accessible to all authenticated users) */}
+          {/* Financial Reports (Statement Generator, Audit Reports, Export) */}
           <Route path="/reports" element={<Reports />} />
           <Route path="/finance/reports" element={<Reports />} />
-          <Route path="/analytics" element={<Reports />} />
 
-          {/* Finance Analytics redirects to unified Financial Report and Analytics */}
-          <Route path="/finance" element={<Navigate to="/reports" replace />} />
-          <Route path="/finance/analytics" element={<Navigate to="/reports" replace />} />
+          {/* Finance Analytics (Executive KPIs, Spend Trend, Department Breakdown) */}
+          <Route path="/finance" element={<FinanceDashboard />} />
+          <Route path="/finance/analytics" element={<FinanceDashboard />} />
+          <Route path="/analytics" element={<FinanceDashboard />} />
 
           {/* Notification Center */}
           <Route path="/notifications" element={<Notifications />} />

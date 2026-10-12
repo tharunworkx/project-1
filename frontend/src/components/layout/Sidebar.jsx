@@ -405,9 +405,9 @@ export function AppSidebar({ ...props }) {
 
                   const checkIsActive = (href, currentPath) => {
                     if (href === "/dashboard") return currentPath === "/" || currentPath === "/dashboard";
-                    if (href === "/finance") return currentPath === "/finance" || currentPath === "/finance/analytics";
+                    if (href === "/finance") return currentPath === "/finance" || currentPath === "/finance/analytics" || currentPath === "/analytics";
                     if (href === "/budgets") return currentPath === "/budgets" || currentPath === "/finance/budgets" || currentPath.startsWith("/budgets/") || currentPath.startsWith("/finance/budgets/");
-                    if (href === "/reports") return currentPath === "/reports" || currentPath === "/finance/reports" || currentPath === "/analytics" || currentPath.startsWith("/reports/") || currentPath.startsWith("/finance/reports/");
+                    if (href === "/reports") return currentPath === "/reports" || currentPath === "/finance/reports" || currentPath.startsWith("/reports/") || currentPath.startsWith("/finance/reports/");
                     if (href === "/reimbursements") return currentPath === "/reimbursements" || currentPath === "/finance/reimbursements" || currentPath.startsWith("/reimbursements/") || currentPath.startsWith("/finance/reimbursements/");
                     if (href === "/fraud-detection") return currentPath === "/fraud-detection" || currentPath.startsWith("/admin/fraud") || currentPath.startsWith("/fraud-detection/");
                     if (href === "/audit") return currentPath === "/audit" || currentPath.startsWith("/admin/audit") || currentPath.startsWith("/audit/");
@@ -430,19 +430,19 @@ export function AppSidebar({ ...props }) {
                         tooltip={item.label}
                         isActive={isActive}
                         className={cn(
-                          "h-10 rounded-xl px-3 transition-colors cursor-pointer",
+                          "h-10 rounded-xl px-3 transition-colors cursor-pointer select-none",
                           "group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:mx-auto!",
                           isActive
                             ? "bg-zinc-200! text-zinc-950! font-semibold shadow-xs border border-zinc-300/70 hover:bg-zinc-200! hover:text-zinc-950! group-data-[collapsible=icon]:bg-zinc-200! group-data-[collapsible=icon]:text-zinc-950! group-data-[collapsible=icon]:shadow-xs group-data-[collapsible=icon]:border group-data-[collapsible=icon]:border-zinc-300/70 dark:bg-zinc-800! dark:text-white! dark:hover:bg-zinc-800! dark:hover:text-white! dark:border dark:border-zinc-700/60 dark:group-data-[collapsible=icon]:bg-zinc-800! dark:group-data-[collapsible=icon]:text-white!"
-                            : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80 bg-transparent dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800/40 dark:bg-transparent group-data-[collapsible=icon]:bg-transparent"
+                            : "text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/80 bg-transparent dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800/60 dark:bg-transparent group-data-[collapsible=icon]:bg-transparent"
                         )}
                       >
-                        <NavLink to={item.href} className="flex items-center justify-start group-data-[collapsible=icon]:justify-center size-full">
-                          <Icon className={cn("size-4.5 shrink-0", isActive ? "text-zinc-950 dark:text-white" : "text-zinc-600 dark:text-zinc-400")} />
-                          <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
+                        <NavLink to={item.href} className="flex items-center gap-2.5 justify-start group-data-[collapsible=icon]:justify-center size-full truncate">
+                          <Icon className={cn("size-4.5 shrink-0", isActive ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-300")} />
+                          <span className="flex-1 truncate font-medium group-data-[collapsible=icon]:hidden">{item.label}</span>
                           {item.badge && (
                             <span className={cn(
-                              "size-5 rounded-full text-[11px] font-semibold flex items-center justify-center ml-auto group-data-[collapsible=icon]:hidden",
+                              "size-5 rounded-full text-[11px] font-semibold flex items-center justify-center ml-auto group-data-[collapsible=icon]:hidden shrink-0",
                               isActive
                                 ? "bg-zinc-300 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-200"
                                 : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
